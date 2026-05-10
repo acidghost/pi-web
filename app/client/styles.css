@@ -1,0 +1,292 @@
+@import "missing.css";
+
+:root {
+  color-scheme: light dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.35;
+
+  --main-font:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --secondary-font: var(--main-font);
+  --display-font: var(--main-font);
+  --mono-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, ui-monospace, monospace;
+  --app-rhythm: 1.35rem;
+  --density: 0.75;
+  --line-length: 72rem;
+  --accent: light-dark(#006d8f, #67e8f9);
+  --muted-accent: light-dark(#147c94, #22d3ee);
+  --border-radius: calc(var(--app-rhythm) / 2);
+  --interactive-border-radius: var(--border-radius);
+
+  --app-line: color-mix(in srgb, var(--plain-graphical-fg) 82%, transparent);
+  --app-glass: color-mix(in srgb, var(--bg) 80%, transparent);
+  --app-message-width: calc(var(--line-length) * 0.72);
+  --app-brand-size: calc(var(--app-rhythm) * 1.75);
+  --app-glow: light-dark(#7c3aed, #a78bfa);
+  --app-page-bg:
+    radial-gradient(
+      circle at 8% 0,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent calc(var(--line-length) / 2)
+    ),
+    radial-gradient(
+      circle at 100% 8%,
+      color-mix(in srgb, var(--app-glow) 12%, transparent),
+      transparent calc(var(--line-length) / 2.5)
+    ),
+    var(--bg);
+}
+
+html,
+body,
+#app {
+  block-size: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: var(--app-page-bg);
+}
+
+.app-chrome {
+  --graphical-fg: var(--app-line);
+
+  background: var(--app-glass);
+  backdrop-filter: blur(var(--gap));
+  box-shadow: 0 var(--border-width) 0 color-mix(in srgb, white 5%, transparent) inset;
+  padding: var(--gap);
+}
+
+.app-header {
+  border-block-end: var(--border-width) solid var(--app-line);
+  position: relative;
+  z-index: 1;
+}
+
+.app-header hgroup {
+  min-inline-size: 0;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gap) / 2);
+  margin: 0;
+  font-size: 1em;
+  font-weight: 750;
+  line-height: var(--app-rhythm);
+}
+
+.app-brand {
+  flex: 0 0 auto;
+  inline-size: var(--app-brand-size);
+  block-size: var(--app-brand-size);
+  border-radius: var(--border-radius);
+  background: var(--accent);
+  color: var(--bg);
+  font-size: calc(var(--app-rhythm) * 1.1);
+  font-weight: 800;
+  box-shadow: var(--shadow);
+}
+
+.app-subtitle {
+  margin: calc(var(--gap) / 4) 0 0 calc(var(--app-brand-size) + var(--gap) / 2);
+  color: var(--muted-fg);
+  font-size: 0.8em;
+  line-height: var(--app-rhythm);
+}
+
+.app-actions button,
+.composer-form button {
+  white-space: nowrap;
+}
+
+.app-status {
+  max-inline-size: min(calc(var(--line-length) / 2), 45vi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-metadata {
+  --graphical-fg: var(--app-line);
+
+  border-block-end: var(--border-width) solid var(--app-line);
+  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  padding: calc(var(--gap) / 2) var(--gap);
+}
+
+.metadata-list {
+  grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2.1fr);
+}
+
+.metadata-card {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.metadata-label {
+  color: var(--muted-fg);
+  font-size: 0.75em;
+}
+
+.metadata-card dd {
+  margin: 0;
+}
+
+.metadata-card code {
+  display: block;
+  margin-block-start: calc(var(--gap) / 4);
+  overflow-wrap: anywhere;
+}
+
+.transcript {
+  min-block-size: 0;
+  inline-size: 100%;
+  max-inline-size: none;
+  overflow-y: auto;
+  padding-block: var(--gap);
+  scrollbar-gutter: stable;
+}
+
+.message-card {
+  max-inline-size: min(var(--app-message-width), 100%);
+  margin: 0;
+  box-shadow: var(--shadow);
+}
+
+.message-text {
+  white-space: pre-wrap;
+}
+
+.message[data-author="user"] .message-text {
+  border-end-end-radius: calc(var(--border-radius) / 3);
+}
+
+.message[data-author="assistant"] .message-text {
+  border-start-start-radius: calc(var(--border-radius) / 3);
+}
+
+.tool-state {
+  color: var(--accent);
+}
+
+.tool-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call pre {
+  white-space: pre-wrap;
+}
+
+.empty-state {
+  inline-size: min(calc(var(--line-length) / 2), calc(100% - 2 * var(--gap)));
+  margin: clamp(calc(var(--gap) * 3), 10vb, calc(var(--gap) * 6)) auto 0;
+  box-shadow: var(--shadow);
+}
+
+.empty-state-label {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.empty-state p {
+  margin-block: 0;
+}
+
+.composer {
+  border-block-start: var(--border-width) solid var(--app-line);
+}
+
+.composer-status,
+.composer-form {
+  inline-size: 100%;
+}
+
+.composer-status {
+  margin-block-end: calc(var(--gap) / 2);
+}
+
+.composer-status > * {
+  margin: 0;
+}
+
+.composer-hint {
+  color: var(--muted-fg);
+}
+
+.composer-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  box-shadow: var(--shadow);
+}
+
+.composer-form:focus-within {
+  --graphical-fg: var(--accent);
+
+  box-shadow: var(--shadow-focus);
+}
+
+.message-input {
+  min-block-size: calc(var(--app-rhythm) * 2.5);
+  max-block-size: 32svb;
+  resize: vertical;
+}
+
+.message-input::placeholder {
+  color: var(--faded-fg);
+  opacity: 1;
+  text-align: start;
+}
+
+.composer-submit {
+  display: flex;
+  margin: 0;
+}
+
+.composer-submit > button,
+.composer-form > button {
+  justify-content: center;
+}
+
+@media (max-width: 48rem) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-actions,
+  .composer-submit,
+  .composer-form button {
+    inline-size: 100%;
+  }
+
+  .app-actions,
+  .composer-status {
+    justify-content: space-between;
+  }
+
+  .metadata-list,
+  .composer-form {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .composer-hint {
+    display: none;
+  }
+}

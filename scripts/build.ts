@@ -11,18 +11,23 @@ async function buildExecutable() {
   const started = performance.now();
   await rm(outdir, { recursive: true, force: true });
 
-  const result = Bun.spawnSync(
-    ["bun", "build", "--target=bun", "--production", "--compile", "--outfile", outfile, entrypoint],
-    {
-      cwd: root,
-      stdout: "inherit",
-      stderr: "inherit",
-      env: { ...process.env, NODE_ENV: "production" },
-    },
-  );
+  const result = await Bun.build({
+    compile: true,
+    target: "bun",
+    outdir: outdir,
+    entrypoints: [entrypoint],
+  });
 
-  if (result.exitCode !== 0) process.exit(result.exitCode);
+  for (const m of result.logs) {
+    const pos = m.position?.file ? ` :: ${m.position.file}:${m.position.line}` : "";
+    console.log(`[build] ${m.level} :: ${m.message}${pos}`);
+  }
 
+  if (!result.success) process.exit(1);
+
+  const ogOutfile = join(outdir, "server");
+  await cp(ogOutfile, outfile);
+  await rm(ogOutfile);
   await chmod(outfile, 0o755);
   console.log(`[build] wrote ${outfile} in ${Math.round(performance.now() - started)}ms`);
 }

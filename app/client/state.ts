@@ -94,9 +94,8 @@ function replaceCurrentAssistantWithFinal(event: Extract<BrowserEvent, { type: "
 function findLastAssistantMessage(): AssistantMessage | undefined {
   for (let index = state.messages.length - 1; index >= 0; index--) {
     const message = state.messages[index];
-    if (message?.role === "assistant") return message as AssistantMessage;
+    if (message?.role === "assistant") return message;
   }
-  return undefined;
 }
 
 function appendToolCall(event: Extract<BrowserEvent, { type: "tool_start" }>) {
@@ -110,9 +109,7 @@ function appendToolCall(event: Extract<BrowserEvent, { type: "tool_start" }>) {
       type: "toolCall",
       id: event.toolCallId,
       name: event.toolName,
-      arguments: (typeof event.args === "object" && event.args !== null
-        ? event.args
-        : {}) as Record<string, unknown>,
+      arguments: typeof event.args === "object" && event.args !== null ? event.args : {},
     };
     assistant.content.push(toolCall);
   }

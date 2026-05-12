@@ -1,6 +1,8 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { Message } from "@earendil-works/pi-ai";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import type { BrowserEvent, UiMessage } from "../shared/protocol.ts";
+import { contentText } from "@shared/message-content";
+import type { BrowserEvent, UiMessage } from "@shared/protocol";
 import type { WebSession } from "./types.ts";
 
 export function sseData(event: BrowserEvent): string {
@@ -22,29 +24,15 @@ export function broadcast(webSession: WebSession, event: BrowserEvent): void {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+type ToolResultLike = {
+  content?: Message["content"];
+  details?: unknown;
+};
 
-function textFromContent(content: unknown, includeImages = true): string {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-
-  return content
-    .map((block) => {
-      if (!isRecord(block)) return "";
-      if (block.type === "text" && typeof block.text === "string") return block.text;
-      if (includeImages && block.type === "image") return "[image]";
-      return "";
-    })
-    .filter(Boolean)
-    .join("\n");
-}
-
-function toolResultText(result: unknown): string | undefined {
-  if (!isRecord(result)) return undefined;
-  const contentText = textFromContent(result.content, true).trim();
-  if (contentText) return contentText;
+function toolResultText(result?: ToolResultLike): string | undefined {
+  if (!result) return undefined;
+  const text = result.content ? contentText(result.content) : "";
+  if (text) return text;
   if (result.details !== undefined) return safeJson(result.details);
   return undefined;
 }
@@ -57,18 +45,6 @@ function safeJson(value: unknown): string {
   }
 }
 
-function assistantText(message: AgentMessage): string {
-  const msg = message as unknown;
-  if (!isRecord(msg) || msg.role !== "assistant") return "";
-  return textFromContent(msg.content, false);
-}
-
-function messageTimestamp(message: AgentMessage): number | undefined {
-  const msg = message as unknown;
-  if (!isRecord(msg) || typeof msg.timestamp !== "number") return undefined;
-  return msg.timestamp;
-}
-
 export function mapAgentEvent(webSession: WebSession, event: AgentSessionEvent): BrowserEvent[] {
   webSession.updatedAt = Date.now();
 
@@ -77,16 +53,15 @@ export function mapAgentEvent(webSession: WebSession, event: AgentSessionEvent):
       return [sessionStateEvent(webSession)];
 
     case "message_start": {
-      const msg = event.message as unknown;
-      if (isRecord(msg) && msg.role === "assistant") {
-        const messageId = `assistant-${messageTimestamp(event.message) ?? Date.now()}-${crypto.randomUUID()}`;
+      if (event.message.role === "assistant") {
+        const messageId = `assistant-${event.message.timestamp}-${crypto.randomUUID()}`;
         webSession.currentAssistantMessageId = messageId;
         return [
           {
             type: "message_start",
             messageId,
             role: "assistant",
-            timestamp: messageTimestamp(event.message),
+            timestamp: event.message.timestamp,
           },
         ];
       }
@@ -94,10 +69,8 @@ export function mapAgentEvent(webSession: WebSession, event: AgentSessionEvent):
     }
 
     case "message_update": {
-      const msg = event.message as unknown;
       if (
-        isRecord(msg) &&
-        msg.role === "assistant" &&
+        event.message.role === "assistant" &&
         event.assistantMessageEvent.type === "text_delta" &&
         webSession.currentAssistantMessageId
       ) {
@@ -118,22 +91,21 @@ export function mapAgentEvent(webSession: WebSession, event: AgentSessionEvent):
     }
 
     case "message_end": {
-      const msg = event.message as unknown;
-      if (isRecord(msg) && msg.role === "assistant" && webSession.currentAssistantMessageId) {
+      if (event.message.role === "assistant" && webSession.currentAssistantMessageId) {
         const messageId = webSession.currentAssistantMessageId;
         webSession.currentAssistantMessageId = undefined;
         const events: BrowserEvent[] = [
           {
             type: "message_end",
             messageId,
-            text: assistantText(event.message),
-            stopReason: typeof msg.stopReason === "string" ? msg.stopReason : undefined,
-            timestamp: messageTimestamp(event.message),
+            text: contentText(event.message.content),
+            stopReason: event.message.stopReason,
+            timestamp: event.message.timestamp,
           },
         ];
-        if (typeof msg.errorMessage === "string" && msg.errorMessage) {
-          webSession.lastError = msg.errorMessage;
-          events.push({ type: "error", message: msg.errorMessage });
+        if (event.message.errorMessage) {
+          webSession.lastError = event.message.errorMessage;
+          events.push({ type: "error", message: event.message.errorMessage });
         }
         return events;
       }
@@ -208,21 +180,23 @@ export function mapAgentEvent(webSession: WebSession, event: AgentSessionEvent):
 export function normalizeMessages(messages: AgentMessage[]): UiMessage[] {
   const normalized: UiMessage[] = [];
 
-  messages.forEach((message, index) => {
-    const msg = message as unknown;
-    if (!isRecord(msg) || typeof msg.role !== "string") return;
-    const timestamp = typeof msg.timestamp === "number" ? msg.timestamp : undefined;
+  messages.forEach((msg, index) => {
+    const timestamp = msg.timestamp;
 
     if (msg.role === "user") {
-      const text = textFromContent(msg.content, true).trim();
+      const text = contentText(msg.content);
       if (text) normalized.push({ id: `history-${index}`, role: "user", text, timestamp });
       return;
     }
 
     if (msg.role === "assistant") {
-      const text = textFromContent(msg.content, false).trim();
+      const text = contentText(msg.content, {
+        includeImages: false,
+        includeThinking: false,
+        includeToolCalls: false,
+      });
       if (text) normalized.push({ id: `history-${index}`, role: "assistant", text, timestamp });
-      if (typeof msg.errorMessage === "string" && msg.errorMessage) {
+      if (msg.errorMessage) {
         normalized.push({
           id: `history-${index}-error`,
           role: "system",
@@ -236,8 +210,7 @@ export function normalizeMessages(messages: AgentMessage[]): UiMessage[] {
 
     if (msg.role === "toolResult") {
       const text =
-        textFromContent(msg.content, true).trim() ||
-        (msg.details !== undefined ? safeJson(msg.details) : "");
+        contentText(msg.content) || (msg.details !== undefined ? safeJson(msg.details) : "");
       if (text) {
         normalized.push({
           id: typeof msg.toolCallId === "string" ? `tool-${msg.toolCallId}` : `history-${index}`,

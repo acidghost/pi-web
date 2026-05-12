@@ -1,19 +1,13 @@
-import type { ToolResultMessage } from "@earendil-works/pi-ai";
+import type { ToolCall, ToolResultMessage } from "@earendil-works/pi-ai";
+import { contentText } from "@shared/message-content";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { state } from "../state";
-import { contentText } from "./message-utils";
-
-export interface ToolCallViewModel {
-  id: string;
-  name: string;
-  arguments: Record<string, unknown>;
-}
 
 @customElement("pi-tool-call")
 export class PiToolCall extends LitElement {
   @property({ attribute: false })
-  call?: ToolCallViewModel;
+  call?: ToolCall;
 
   @property({ attribute: false })
   result?: ToolResultMessage;

@@ -6,7 +6,7 @@ import type {
   ModelRegistry,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import type { BrowserEvent } from "../shared/protocol.ts";
+import type { BrowserEvent } from "@shared/protocol";
 
 export type SupportedToolName = "read" | "bash";
 

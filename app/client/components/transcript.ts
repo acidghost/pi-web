@@ -1,8 +1,8 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import "./message-item";
-import { toolResultById } from "./message-utils";
 
 @customElement("pi-transcript")
 export class PiTranscript extends LitElement {
@@ -32,39 +32,50 @@ export class PiTranscript extends LitElement {
   }
 
   override render() {
-    const results = toolResultById(this.messages);
     return html`
       <main id="transcript" class="transcript margin:0">
         ${
           this.messages.length
-            ? html`
-              <ol class="message-list flex-column container padding-inline margin-block:0" role="list" aria-label="Conversation">
-                ${this.messages.map((message, index) =>
-                  message.role === "user" || message.role === "assistant"
-                    ? html`<li
-                      class=${`message flex-column align-items:${message.role === "user" ? "end" : "start"}`}
-                      data-author=${message.role}
-                      data-message-index=${index}
-                    >
-                      <pi-message-item
-                        class="contents"
-                        .message=${message}
-                        .results=${results}
-                      ></pi-message-item>
-                    </li>`
-                    : nothing,
-                )}
-              </ol>
-            `
+            ? this.renderMessages()
             : html`
-              <section class="empty-state box info text-align:center" aria-label="Empty conversation">
-                <p class="empty-state-label allcaps">Ready</p>
-                <h2>Start a local pi conversation</h2>
-                <p>Ask pi to inspect files, run commands, or make code changes in this cwd.</p>
-              </section>
-            `
+            <section class="empty-state box info text-align:center" aria-label="Empty conversation">
+              <p class="empty-state-label allcaps">Ready</p>
+              <h2>Start a local pi conversation</h2>
+              <p>Ask pi to inspect files, run commands, or make code changes in this cwd.</p>
+            </section>
+          `
         }
       </main>
+    `;
+  }
+
+  private renderMessages() {
+    const results = new Map<string, ToolResultMessage>();
+    for (const message of this.messages) {
+      if (message.role === "toolResult") results.set(message.toolCallId, message);
+    }
+    return html`
+      <ol
+        class="message-list flex-column container padding-inline margin-block:0"
+        role="list"
+        aria-label="Conversation"
+      >
+        ${this.messages.map((message, index) =>
+          message.role === "user" || message.role === "assistant"
+            ? html`<li
+              class=${`message flex-column align-items:${message.role === "user" ? "end" : "start"}`}
+              data-author=${message.role}
+              data-message-index=${index}
+            >
+              <pi-message-item
+                class="contents"
+                .message=${message}
+                .results=${results}
+              ></pi-message-item>
+            </li>`
+            : nothing,
+        )}
+      </ol>
     `;
   }
 }

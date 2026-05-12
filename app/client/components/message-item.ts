@@ -1,9 +1,9 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai";
+import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import "./tool-call";
-import { assistantToolCalls, contentText } from "./message-utils";
+import { contentText } from "@shared/message-content";
 
 @customElement("pi-message-item")
 export class PiMessageItem extends LitElement {
@@ -27,9 +27,8 @@ export class PiMessageItem extends LitElement {
     }
 
     if (this.message.role === "assistant") {
-      const assistant = this.message as AssistantMessage;
-      const text = contentText(assistant.content).trim();
-      const calls = assistantToolCalls(assistant);
+      const text = contentText(this.message.content);
+      const calls = this.message.content.filter((block) => block.type === "toolCall");
       return html`
         ${text ? html`<article class="message-card message-text box">${text}</article>` : nothing}
         ${calls.map(

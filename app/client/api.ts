@@ -7,18 +7,12 @@ import type {
   SessionMetadataResponse,
 } from "@shared/protocol";
 
-function errorMessageFromBody(data: unknown): string | undefined {
-  if (typeof data !== "object" || data === null || !("error" in data)) return undefined;
-  const { error } = data;
-  if (typeof error !== "object" || error === null || !("message" in error)) return undefined;
-  return typeof error.message === "string" ? error.message : undefined;
-}
 
-export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
-  const data: unknown = await response.json().catch(() => ({}));
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = errorMessageFromBody(data) ?? `${response.status} ${response.statusText}`;
+    const message = data.error?.message ?? `${response.status} ${response.statusText}`;
     throw new Error(message);
   }
   return data as T;

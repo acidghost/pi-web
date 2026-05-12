@@ -1,5 +1,6 @@
 import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { html, LitElement, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { state } from "../state";
 import { contentText } from "./message-utils";
 
@@ -9,14 +10,13 @@ export interface ToolCallViewModel {
   arguments: Record<string, unknown>;
 }
 
+@customElement("pi-tool-call")
 export class PiToolCall extends LitElement {
-  declare call?: ToolCallViewModel;
-  declare result?: ToolResultMessage;
+  @property({ attribute: false })
+  call?: ToolCallViewModel;
 
-  static override properties = {
-    call: { attribute: false },
-    result: { attribute: false },
-  };
+  @property({ attribute: false })
+  result?: ToolResultMessage;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -40,8 +40,4 @@ export class PiToolCall extends LitElement {
       </details>
     `;
   }
-}
-
-if (!customElements.get("pi-tool-call")) {
-  customElements.define("pi-tool-call", PiToolCall);
 }

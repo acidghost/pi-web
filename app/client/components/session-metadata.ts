@@ -1,20 +1,14 @@
 import type { SessionMetadataResponse } from "@shared/protocol";
 import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
+@customElement("pi-session-metadata")
 export class PiSessionMetadata extends LitElement {
-  declare sessionId: string | null;
-  declare metadata: SessionMetadataResponse | null;
+  @property({ attribute: false })
+  sessionId: string | null = null;
 
-  static override properties = {
-    sessionId: { attribute: false },
-    metadata: { attribute: false },
-  };
-
-  constructor() {
-    super();
-    this.sessionId = null;
-    this.metadata = null;
-  }
+  @property({ attribute: false })
+  metadata: SessionMetadataResponse | null = null;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -36,8 +30,4 @@ export class PiSessionMetadata extends LitElement {
       </section>
     `;
   }
-}
-
-if (!customElements.get("pi-session-metadata")) {
-  customElements.define("pi-session-metadata", PiSessionMetadata);
 }

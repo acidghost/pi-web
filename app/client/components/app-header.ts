@@ -1,22 +1,17 @@
 import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import type { StatusTone } from "../types";
 
+@customElement("pi-app-header")
 export class PiAppHeader extends LitElement {
-  declare statusText: string;
-  declare statusTone: string;
-  declare isStreaming: boolean;
+  @property({ type: String })
+  statusText = "";
 
-  static override properties = {
-    statusText: { type: String },
-    statusTone: { type: String },
-    isStreaming: { type: Boolean },
-  };
+  @property({ type: String })
+  statusTone: StatusTone = "plain";
 
-  constructor() {
-    super();
-    this.statusText = "";
-    this.statusTone = "plain";
-    this.isStreaming = false;
-  }
+  @property({ type: Boolean })
+  isStreaming = false;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -49,8 +44,4 @@ export class PiAppHeader extends LitElement {
       </header>
     `;
   }
-}
-
-if (!customElements.get("pi-app-header")) {
-  customElements.define("pi-app-header", PiAppHeader);
 }

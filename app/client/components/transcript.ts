@@ -1,23 +1,18 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { html, LitElement, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import "./message-item";
 import { toolResultById } from "./message-utils";
 
+@customElement("pi-transcript")
 export class PiTranscript extends LitElement {
-  declare messages: AgentMessage[];
-  declare transcriptRevision: number;
+  @property({ attribute: false })
+  messages: AgentMessage[] = [];
+
+  @property({ type: Number, attribute: "transcript-revision" })
+  transcriptRevision = 0;
+
   private lastAutoScrolledTranscriptRevision = 0;
-
-  static override properties = {
-    messages: { attribute: false },
-    transcriptRevision: { type: Number, attribute: "transcript-revision" },
-  };
-
-  constructor() {
-    super();
-    this.messages = [];
-    this.transcriptRevision = 0;
-  }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -72,8 +67,4 @@ export class PiTranscript extends LitElement {
       </main>
     `;
   }
-}
-
-if (!customElements.get("pi-transcript")) {
-  customElements.define("pi-transcript", PiTranscript);
 }

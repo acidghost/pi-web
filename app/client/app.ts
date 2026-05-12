@@ -1,10 +1,13 @@
 import { html, LitElement } from "lit";
+import { customElement } from "lit/decorators.js";
 import "./components/app-header";
 import "./components/message-composer";
 import "./components/session-metadata";
 import "./components/transcript";
 import { state } from "./state";
+import type { StatusTone } from "./types";
 
+@customElement("pi-web-app")
 export class PiWebApp extends LitElement {
   onSend?: (message: string) => void;
   onAbort?: () => void;
@@ -21,7 +24,7 @@ export class PiWebApp extends LitElement {
     return state.isStreaming ? "Streaming…" : "Idle";
   }
 
-  private statusTone(): string {
+  private statusTone(): StatusTone {
     if (state.lastError) return "bad";
     if (state.isStreaming) return "warn";
     if (state.sessionId) return "ok";
@@ -64,8 +67,4 @@ export class PiWebApp extends LitElement {
       ></pi-message-composer>
     `;
   }
-}
-
-if (!customElements.get("pi-web-app")) {
-  customElements.define("pi-web-app", PiWebApp);
 }

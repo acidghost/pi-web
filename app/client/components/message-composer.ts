@@ -1,23 +1,19 @@
 import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import type { StatusTone } from "../types";
 
+@customElement("pi-message-composer")
 export class PiMessageComposer extends LitElement {
-  declare statusText: string;
-  declare statusTone: string;
-  declare isStreaming: boolean;
+  @property({ type: String })
+  statusText = "";
+
+  @property({ type: String })
+  statusTone: StatusTone = "plain";
+
+  @property({ type: Boolean })
+  isStreaming = false;
+
   private draft = "";
-
-  static override properties = {
-    statusText: { type: String },
-    statusTone: { type: String },
-    isStreaming: { type: Boolean },
-  };
-
-  constructor() {
-    super();
-    this.statusText = "";
-    this.statusTone = "plain";
-    this.isStreaming = false;
-  }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -79,8 +75,4 @@ export class PiMessageComposer extends LitElement {
       </footer>
     `;
   }
-}
-
-if (!customElements.get("pi-message-composer")) {
-  customElements.define("pi-message-composer", PiMessageComposer);
 }

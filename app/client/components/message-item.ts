@@ -1,22 +1,17 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai";
 import { html, LitElement, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import "./tool-call";
 import { assistantToolCalls, contentText } from "./message-utils";
 
+@customElement("pi-message-item")
 export class PiMessageItem extends LitElement {
-  declare message?: AgentMessage;
-  declare results: Map<string, ToolResultMessage>;
+  @property({ attribute: false })
+  message?: AgentMessage;
 
-  static override properties = {
-    message: { attribute: false },
-    results: { attribute: false },
-  };
-
-  constructor() {
-    super();
-    this.results = new Map<string, ToolResultMessage>();
-  }
+  @property({ attribute: false })
+  results = new Map<string, ToolResultMessage>();
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -49,8 +44,4 @@ export class PiMessageItem extends LitElement {
 
     return nothing;
   }
-}
-
-if (!customElements.get("pi-message-item")) {
-  customElements.define("pi-message-item", PiMessageItem);
 }

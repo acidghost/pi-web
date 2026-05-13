@@ -1,4 +1,4 @@
-import type { BrowserEvent } from "@shared/protocol";
+import { BrowserEventSchema } from "@shared/protocol";
 import { html, render } from "lit";
 import "./app";
 import {
@@ -41,7 +41,7 @@ function openEvents(sessionId: string) {
 
   eventSource.onmessage = (message) => {
     try {
-      const event = JSON.parse(message.data) as BrowserEvent;
+      const event = BrowserEventSchema.parse(JSON.parse(message.data));
       applyBrowserEvent(event);
       renderApp();
     } catch (error) {

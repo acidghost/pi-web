@@ -9,31 +9,55 @@ import type {
   SetModelRequest,
   SetModelResponse,
 } from "@shared/protocol";
+import {
+  AbortResponseSchema,
+  ApiErrorResponseSchema,
+  CreateSessionResponseSchema,
+  formatZodError,
+  MessagesResponseSchema,
+  ModelsResponseSchema,
+  PromptResponseSchema,
+  SessionMetadataResponseSchema,
+  SetModelResponseSchema,
+} from "@shared/protocol";
+import type { z } from "zod";
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+async function fetchJson<T>(schema: z.ZodType<T>, url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    const message = data.error?.message ?? `${response.status} ${response.statusText}`;
+    const error = ApiErrorResponseSchema.safeParse(data);
+    const message = error.success
+      ? error.data.error.message
+      : `${response.status} ${response.statusText}`;
     throw new Error(message);
   }
-  return data as T;
+
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error(`Invalid response from server: ${formatZodError(parsed.error)}`);
+  }
+  return parsed.data;
 }
 
 export function createSession(): Promise<CreateSessionResponse> {
-  return fetchJson<CreateSessionResponse>("/api/sessions", { method: "POST" });
+  return fetchJson(CreateSessionResponseSchema, "/api/sessions", { method: "POST" });
 }
 
 export function getSession(sessionId: string): Promise<SessionMetadataResponse> {
-  return fetchJson<SessionMetadataResponse>(`/api/sessions/${encodeURIComponent(sessionId)}`);
+  return fetchJson(SessionMetadataResponseSchema, `/api/sessions/${encodeURIComponent(sessionId)}`);
 }
 
 export function getMessages(sessionId: string): Promise<MessagesResponse> {
-  return fetchJson<MessagesResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/messages`);
+  return fetchJson(
+    MessagesResponseSchema,
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages`,
+  );
 }
 
 export function getModels(): Promise<ModelsResponse> {
-  return fetchJson<ModelsResponse>("/api/models");
+  return fetchJson(ModelsResponseSchema, "/api/models");
 }
 
 export function setSessionModel(
@@ -42,7 +66,7 @@ export function setSessionModel(
   id: string,
 ): Promise<SetModelResponse> {
   const body: SetModelRequest = { provider, id };
-  return fetchJson<SetModelResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/model`, {
+  return fetchJson(SetModelResponseSchema, `/api/sessions/${encodeURIComponent(sessionId)}/model`, {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -51,7 +75,7 @@ export function setSessionModel(
 
 export function sendPrompt(sessionId: string, message: string): Promise<PromptResponse> {
   const body: PromptRequest = { message };
-  return fetchJson<PromptResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/prompt`, {
+  return fetchJson(PromptResponseSchema, `/api/sessions/${encodeURIComponent(sessionId)}/prompt`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -59,7 +83,7 @@ export function sendPrompt(sessionId: string, message: string): Promise<PromptRe
 }
 
 export function abortSession(sessionId: string): Promise<AbortResponse> {
-  return fetchJson<AbortResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/abort`, {
+  return fetchJson(AbortResponseSchema, `/api/sessions/${encodeURIComponent(sessionId)}/abort`, {
     method: "POST",
   });
 }

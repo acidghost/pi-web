@@ -1,4 +1,5 @@
 import type { BunRequest } from "bun";
+import type { z } from "zod";
 import homepage from "./index.html";
 import { loadConfig } from "./pi/config.ts";
 import {
@@ -15,18 +16,35 @@ import {
 } from "./pi/session-manager.ts";
 import { normalizeMessages, sseData } from "./pi/streaming.ts";
 import type { SseSubscriber, WebSession } from "./pi/types.ts";
+import {
+  AbortResponseSchema,
+  ApiErrorResponseSchema,
+  CreateSessionResponseSchema,
+  formatZodError,
+  HealthResponseSchema,
+  MessagesResponseSchema,
+  ModelsResponseSchema,
+  PromptRequestSchema,
+  PromptResponseSchema,
+  SessionMetadataResponseSchema,
+  SetModelRequestSchema,
+  SetModelResponseSchema,
+} from "./shared/protocol.ts";
 
 const config = loadConfig();
 const services = createServices(config);
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-function json(data: unknown, status: number = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: { ...commonResponseHeaders } });
+function json<T>(schema: z.ZodType<T>, data: T, status: number = 200): Response {
+  return new Response(JSON.stringify(schema.parse(data)), {
+    status,
+    headers: { ...commonResponseHeaders },
+  });
 }
 
 function jsonError(message: string, status = 500): Response {
-  return json({ error: { message } }, status);
+  return json(ApiErrorResponseSchema, { error: { message } }, status);
 }
 
 function notFound(): Response {
@@ -37,27 +55,27 @@ const commonResponseHeaders: Record<string, string> = {
   "content-type": "application/json; charset=utf-8",
 };
 
-async function parseJsonBody(request: Request): Promise<unknown> {
+async function parseJsonBody<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
-    throw new Response(JSON.stringify({ error: { message: "Expected application/json" } }), {
-      status: 415,
-      headers: { ...commonResponseHeaders },
-    });
+    throw jsonError("Expected application/json", 415);
   }
+
+  let body: unknown;
   try {
-    return await request.json();
+    body = await request.json();
   } catch {
-    throw new Response(JSON.stringify({ error: { message: "Invalid JSON body" } }), {
-      status: 400,
-      headers: { ...commonResponseHeaders },
-    });
+    throw jsonError("Invalid JSON body", 400);
   }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw jsonError(formatZodError(parsed.error), 400);
+  return parsed.data;
 }
 
 async function handleCreateSession(): Promise<Response> {
   const webSession = await createWebSession(config, services);
-  return json({ sessionId: webSession.id }, 201);
+  return json(CreateSessionResponseSchema, { sessionId: webSession.id }, 201);
 }
 
 async function handleWithSession(
@@ -72,25 +90,18 @@ async function handleWithSession(
 }
 
 async function handleGetSession(webSession: WebSession): Promise<Response> {
-  return json(sessionMetadata(config, webSession));
+  return json(SessionMetadataResponseSchema, sessionMetadata(config, webSession));
 }
 
 async function handleGetMessages(webSession: WebSession): Promise<Response> {
-  return json({
+  return json(MessagesResponseSchema, {
     messages: normalizeMessages(webSession.session.messages),
     agentMessages: webSession.session.messages,
   });
 }
 
 async function handlePrompt(webSession: WebSession, request: Request): Promise<Response> {
-  const body = await parseJsonBody(request);
-  const message =
-    typeof body === "object" && body !== null && "message" in body
-      ? (body as { message?: unknown }).message
-      : undefined;
-  if (typeof message !== "string" || message.trim().length === 0) {
-    return jsonError("Message must be a non-empty string", 400);
-  }
+  const { message } = await parseJsonBody(request, PromptRequestSchema);
 
   if (webSession.session.isStreaming) {
     return jsonError("Session is already streaming", 409);
@@ -111,7 +122,7 @@ async function handlePrompt(webSession: WebSession, request: Request): Promise<R
   };
 
   try {
-    const run = webSession.session.prompt(message.trim(), {
+    const run = webSession.session.prompt(message, {
       preflightResult: (success) => settleAccepted(success),
     });
 
@@ -129,13 +140,13 @@ async function handlePrompt(webSession: WebSession, request: Request): Promise<R
   const accepted = await acceptedPromise;
   if (!accepted) return jsonError(promptError || webSession.lastError || "Prompt rejected", 400);
   notifyState(webSession);
-  return json({ accepted: true }, 202);
+  return json(PromptResponseSchema, { accepted: true }, 202);
 }
 
 async function handleAbort(webSession: WebSession): Promise<Response> {
   await webSession.session.abort();
   notifyState(webSession);
-  return json({ ok: true });
+  return json(AbortResponseSchema, { ok: true });
 }
 
 async function handleEvents(webSession: WebSession, request: Request): Promise<Response> {
@@ -191,9 +202,11 @@ async function handleEvents(webSession: WebSession, request: Request): Promise<R
 }
 
 function handleModels(): Response {
-  return json({
+  return json(ModelsResponseSchema, {
     models: services.modelRegistry.getAvailable().map((model) => ({
-      ...modelToJson(model),
+      provider: model.provider,
+      id: model.id,
+      name: model.name || model.id,
       api: model.api,
       reasoning: model.reasoning,
     })),
@@ -203,19 +216,7 @@ function handleModels(): Response {
 async function handleSetModel(webSession: WebSession, request: Request): Promise<Response> {
   if (webSession.session.isStreaming) return jsonError("Cannot change model while streaming", 409);
 
-  const body = await parseJsonBody(request);
-  const provider =
-    typeof body === "object" && body !== null && "provider" in body
-      ? (body as { provider?: unknown }).provider
-      : undefined;
-  const modelId =
-    typeof body === "object" && body !== null && "id" in body
-      ? (body as { id?: unknown }).id
-      : undefined;
-
-  if (typeof provider !== "string" || typeof modelId !== "string") {
-    return jsonError("Model provider and id are required", 400);
-  }
+  const { provider, id: modelId } = await parseJsonBody(request, SetModelRequestSchema);
 
   const model = services.modelRegistry.find(provider, modelId);
   if (!model) return jsonError(`Model not found: ${provider}/${modelId}`, 404);
@@ -227,7 +228,7 @@ async function handleSetModel(webSession: WebSession, request: Request): Promise
 
   await webSession.session.setModel(model);
   notifyState(webSession);
-  return json({ ok: true, model: modelToJson(webSession.session.model) });
+  return json(SetModelResponseSchema, { ok: true, model: modelToJson(webSession.session.model) });
 }
 
 function handleApiError(error: unknown): Response {
@@ -253,7 +254,7 @@ const server = Bun.serve({
     "/": homepage,
 
     "/api/health": {
-      GET: apiRoute(() => json({ ok: true })),
+      GET: apiRoute(() => json(HealthResponseSchema, { ok: true })),
     },
     "/api/models": {
       GET: apiRoute(() => handleModels()),

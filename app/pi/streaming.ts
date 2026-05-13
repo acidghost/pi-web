@@ -15,6 +15,14 @@ export function sessionStateEvent(webSession: WebSession): BrowserEvent {
     sessionId: webSession.id,
     isStreaming: webSession.session.isStreaming,
     updatedAt: webSession.updatedAt,
+    model: webSession.session.model
+      ? {
+          provider: webSession.session.model.provider,
+          id: webSession.session.model.id,
+          name: webSession.session.model.name || webSession.session.model.id,
+        }
+      : null,
+    thinkingLevel: webSession.session.thinkingLevel,
   };
 }
 

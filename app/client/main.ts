@@ -1,7 +1,15 @@
 import type { BrowserEvent } from "@shared/protocol";
 import { html, render } from "lit";
 import "./app";
-import { abortSession, createSession, getMessages, getSession, sendPrompt } from "./api";
+import {
+  abortSession,
+  createSession,
+  getMessages,
+  getModels,
+  getSession,
+  sendPrompt,
+  setSessionModel,
+} from "./api";
 import type { PiWebApp } from "./app";
 import { appendOptimisticUserMessage, applyBrowserEvent, setMessages, state } from "./state";
 
@@ -55,6 +63,12 @@ async function refreshMetadata() {
   renderApp();
 }
 
+async function refreshModels() {
+  const response = await getModels();
+  state.models = response.models;
+  renderApp();
+}
+
 async function loadSession(sessionId: string) {
   state.sessionId = sessionId;
   state.lastError = null;
@@ -96,6 +110,19 @@ async function handleSend(message: string) {
   }
 }
 
+async function handleSelectModel(provider: string, id: string) {
+  if (!state.sessionId || state.isStreaming) return;
+  try {
+    state.lastError = null;
+    const response = await setSessionModel(state.sessionId, provider, id);
+    if (state.metadata) state.metadata = { ...state.metadata, model: response.model };
+    renderApp();
+  } catch (error) {
+    state.lastError = error instanceof Error ? error.message : String(error);
+    renderApp();
+  }
+}
+
 async function handleAbort() {
   if (!state.sessionId) return;
   try {
@@ -117,6 +144,11 @@ async function boot() {
   appElement.onSend = (message) => void handleSend(message);
   appElement.onAbort = () => void handleAbort();
   appElement.onNewSession = () => void newSession();
+  appElement.onSelectModel = (provider, id) => void handleSelectModel(provider, id);
+  void refreshModels().catch((error) => {
+    state.lastError = error instanceof Error ? error.message : String(error);
+    renderApp();
+  });
   renderApp();
 
   const sessionId = getUrlSession();

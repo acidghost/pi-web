@@ -12,6 +12,7 @@ export class PiWebApp extends LitElement {
   onSend?: (message: string) => void;
   onAbort?: () => void;
   onNewSession?: () => void;
+  onSelectModel?: (provider: string, id: string) => void;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     // Use the document stylesheet bundled from app/client/styles.css.
@@ -48,6 +49,10 @@ export class PiWebApp extends LitElement {
         class="contents"
         .sessionId=${state.sessionId}
         .metadata=${state.metadata}
+        .models=${state.models}
+        .isStreaming=${state.isStreaming}
+        @select-model=${(event: CustomEvent<{ provider: string; id: string }>) =>
+          this.onSelectModel?.(event.detail.provider, event.detail.id)}
       ></pi-session-metadata>
 
       <pi-transcript

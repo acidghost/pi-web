@@ -124,7 +124,7 @@ body {
 }
 
 .metadata-list {
-  grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2.1fr);
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1.5fr) minmax(16rem, 1fr);
 }
 
 .metadata-card {

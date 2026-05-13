@@ -110,7 +110,7 @@ export function modelToJson(model: Model<Api> | undefined) {
   return {
     provider: model.provider,
     id: model.id,
-    name: model.name,
+    name: model.name || model.id,
   };
 }
 

@@ -1,3 +1,4 @@
+import type { BunRequest } from "bun";
 import homepage from "./index.html";
 import { loadConfig } from "./pi/config.ts";
 import {
@@ -20,15 +21,8 @@ const services = createServices(config);
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-function json(data: unknown, init: ResponseInit | number = 200): Response {
-  const status = typeof init === "number" ? init : (init.status ?? 200);
-  const headers = new Headers(typeof init === "number" ? undefined : init.headers);
-  headers.set("content-type", "application/json; charset=utf-8");
-  return new Response(JSON.stringify(data), {
-    ...(typeof init === "number" ? {} : init),
-    status,
-    headers,
-  });
+function json(data: unknown, status: number = 200): Response {
+  return new Response(JSON.stringify(data), { status, headers: { ...commonResponseHeaders } });
 }
 
 function jsonError(message: string, status = 500): Response {
@@ -39,12 +33,16 @@ function notFound(): Response {
   return jsonError("Not found", 404);
 }
 
+const commonResponseHeaders: Record<string, string> = {
+  "content-type": "application/json; charset=utf-8",
+};
+
 async function parseJsonBody(request: Request): Promise<unknown> {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     throw new Response(JSON.stringify({ error: { message: "Expected application/json" } }), {
       status: 415,
-      headers: { "content-type": "application/json; charset=utf-8" },
+      headers: { ...commonResponseHeaders },
     });
   }
   try {
@@ -52,14 +50,9 @@ async function parseJsonBody(request: Request): Promise<unknown> {
   } catch {
     throw new Response(JSON.stringify({ error: { message: "Invalid JSON body" } }), {
       status: 400,
-      headers: { "content-type": "application/json; charset=utf-8" },
+      headers: { ...commonResponseHeaders },
     });
   }
-}
-
-function getSessionOr404(id: string | undefined): WebSession | Response {
-  if (!id) return notFound();
-  return getWebSession(id) ?? notFound();
 }
 
 async function handleCreateSession(): Promise<Response> {
@@ -67,25 +60,29 @@ async function handleCreateSession(): Promise<Response> {
   return json({ sessionId: webSession.id }, 201);
 }
 
-function handleGetSession(id: string | undefined): Response {
-  const webSession = getSessionOr404(id);
-  if (webSession instanceof Response) return webSession;
+async function handleWithSession(
+  request: BunRequest,
+  handler: (session: WebSession, request: BunRequest) => Promise<Response>,
+): Promise<Response> {
+  const id = request.params.id;
+  if (!id) return notFound();
+  const webSession = getWebSession(id);
+  if (!webSession) return notFound();
+  return await handler(webSession, request);
+}
+
+async function handleGetSession(webSession: WebSession): Promise<Response> {
   return json(sessionMetadata(config, webSession));
 }
 
-function handleGetMessages(id: string | undefined): Response {
-  const webSession = getSessionOr404(id);
-  if (webSession instanceof Response) return webSession;
+async function handleGetMessages(webSession: WebSession): Promise<Response> {
   return json({
     messages: normalizeMessages(webSession.session.messages),
     agentMessages: webSession.session.messages,
   });
 }
 
-async function handlePrompt(id: string | undefined, request: Request): Promise<Response> {
-  const webSession = getSessionOr404(id);
-  if (webSession instanceof Response) return webSession;
-
+async function handlePrompt(webSession: WebSession, request: Request): Promise<Response> {
   const body = await parseJsonBody(request);
   const message =
     typeof body === "object" && body !== null && "message" in body
@@ -135,18 +132,13 @@ async function handlePrompt(id: string | undefined, request: Request): Promise<R
   return json({ accepted: true }, 202);
 }
 
-async function handleAbort(id: string | undefined): Promise<Response> {
-  const webSession = getSessionOr404(id);
-  if (webSession instanceof Response) return webSession;
+async function handleAbort(webSession: WebSession): Promise<Response> {
   await webSession.session.abort();
   notifyState(webSession);
   return json({ ok: true });
 }
 
-function handleEvents(id: string | undefined, request: Request): Response {
-  const webSession = getSessionOr404(id);
-  if (webSession instanceof Response) return webSession;
-
+async function handleEvents(webSession: WebSession, request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   let keepAlive: Timer | undefined;
   let closed = false;
@@ -208,7 +200,35 @@ function handleModels(): Response {
   });
 }
 
-type RouteRequest = Request & { params: Record<string, string> };
+async function handleSetModel(webSession: WebSession, request: Request): Promise<Response> {
+  if (webSession.session.isStreaming) return jsonError("Cannot change model while streaming", 409);
+
+  const body = await parseJsonBody(request);
+  const provider =
+    typeof body === "object" && body !== null && "provider" in body
+      ? (body as { provider?: unknown }).provider
+      : undefined;
+  const modelId =
+    typeof body === "object" && body !== null && "id" in body
+      ? (body as { id?: unknown }).id
+      : undefined;
+
+  if (typeof provider !== "string" || typeof modelId !== "string") {
+    return jsonError("Model provider and id are required", 400);
+  }
+
+  const model = services.modelRegistry.find(provider, modelId);
+  if (!model) return jsonError(`Model not found: ${provider}/${modelId}`, 404);
+
+  const available = services.modelRegistry.getAvailable();
+  if (!available.some((candidate) => candidate.provider === provider && candidate.id === modelId)) {
+    return jsonError(`Model is not available: ${provider}/${modelId}`, 400);
+  }
+
+  await webSession.session.setModel(model);
+  notifyState(webSession);
+  return json({ ok: true, model: modelToJson(webSession.session.model) });
+}
 
 function handleApiError(error: unknown): Response {
   if (error instanceof Response) return error;
@@ -216,8 +236,8 @@ function handleApiError(error: unknown): Response {
   return jsonError(message, 500);
 }
 
-function apiRoute(handler: (request: RouteRequest) => Response | Promise<Response>) {
-  return async (request: RouteRequest) => {
+function apiRoute(handler: (request: BunRequest) => Response | Promise<Response>) {
+  return async (request: BunRequest) => {
     try {
       return await handler(request);
     } catch (error) {
@@ -242,19 +262,22 @@ const server = Bun.serve({
       POST: apiRoute(() => handleCreateSession()),
     },
     "/api/sessions/:id": {
-      GET: apiRoute((request) => handleGetSession(request.params.id)),
+      GET: apiRoute((request) => handleWithSession(request, handleGetSession)),
     },
     "/api/sessions/:id/messages": {
-      GET: apiRoute((request) => handleGetMessages(request.params.id)),
+      GET: apiRoute((request) => handleWithSession(request, handleGetMessages)),
     },
     "/api/sessions/:id/prompt": {
-      POST: apiRoute((request) => handlePrompt(request.params.id, request)),
+      POST: apiRoute((request) => handleWithSession(request, handlePrompt)),
+    },
+    "/api/sessions/:id/model": {
+      PUT: apiRoute((request) => handleWithSession(request, handleSetModel)),
     },
     "/api/sessions/:id/abort": {
-      POST: apiRoute((request) => handleAbort(request.params.id)),
+      POST: apiRoute((request) => handleWithSession(request, handleAbort)),
     },
     "/api/sessions/:id/events": {
-      GET: apiRoute((request) => handleEvents(request.params.id, request)),
+      GET: apiRoute((request) => handleWithSession(request, handleEvents)),
     },
     "/api/*": apiRoute(() => notFound()),
   },

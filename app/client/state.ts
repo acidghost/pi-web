@@ -6,11 +6,12 @@ import type {
   ToolResultMessage,
   Usage,
 } from "@earendil-works/pi-ai";
-import type { BrowserEvent, SessionMetadataResponse } from "@shared/protocol";
+import type { BrowserEvent, ModelSummary, SessionMetadataResponse } from "@shared/protocol";
 
 export interface AppState {
   sessionId: string | null;
   metadata: SessionMetadataResponse | null;
+  models: ModelSummary[];
   messages: AgentMessage[];
   isStreaming: boolean;
   pendingToolCalls: Set<string>;
@@ -23,6 +24,7 @@ export interface AppState {
 export const state: AppState = {
   sessionId: null,
   metadata: null,
+  models: [],
   messages: [],
   isStreaming: false,
   pendingToolCalls: new Set<string>(),
@@ -188,6 +190,8 @@ export function applyBrowserEvent(event: BrowserEvent) {
           ...state.metadata,
           isStreaming: event.isStreaming,
           updatedAt: event.updatedAt,
+          model: event.model,
+          thinkingLevel: event.thinkingLevel,
         };
       break;
 

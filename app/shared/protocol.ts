@@ -1,7 +1,14 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 
 export type BrowserEvent =
-  | { type: "session_state"; sessionId: string; isStreaming: boolean; updatedAt: number }
+  | {
+      type: "session_state";
+      sessionId: string;
+      isStreaming: boolean;
+      updatedAt: number;
+      model: ModelSummary | null;
+      thinkingLevel: string;
+    }
   | { type: "message_start"; messageId: string; role: "assistant"; timestamp?: number }
   | { type: "message_delta"; messageId: string; text: string }
   | {
@@ -64,6 +71,20 @@ export interface PromptRequest {
 
 export interface PromptResponse {
   accepted: true;
+}
+
+export interface SetModelRequest {
+  provider: string;
+  id: string;
+}
+
+export interface SetModelResponse {
+  ok: true;
+  model: ModelSummary | null;
+}
+
+export interface ModelsResponse {
+  models: Array<ModelSummary & { api?: string; reasoning?: unknown }>;
 }
 
 export interface AbortResponse {

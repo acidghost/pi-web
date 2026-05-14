@@ -33,7 +33,7 @@ export class PiTranscript extends LitElement {
 
   override render() {
     return html`
-      <main id="transcript" class="transcript margin:0">
+      <main id="transcript" class="fullbleed margin:0">
         ${
           this.messages.length
             ? this.renderMessages()

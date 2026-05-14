@@ -21,7 +21,7 @@ export class PiMessageItem extends LitElement {
     if (!this.message || this.message.role === "toolResult") return nothing;
 
     if (this.message.role === "user") {
-      return html`<article class="message-card message-text box info">
+      return html`<article class="message-card text-align:right box-shadow box info">
         ${contentText(this.message.content)}
       </article>`;
     }
@@ -30,7 +30,7 @@ export class PiMessageItem extends LitElement {
       const text = contentText(this.message.content);
       const calls = this.message.content.filter((block) => block.type === "toolCall");
       return html`
-        ${text ? html`<article class="message-card message-text box">${text}</article>` : nothing}
+        ${text ? html`<article class="message-card box-shadow box">${text}</article>` : nothing}
         ${calls.map(
           (call) => html`<pi-tool-call
             class="contents"

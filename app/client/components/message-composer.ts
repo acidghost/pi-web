@@ -29,22 +29,25 @@ export class PiMessageComposer extends LitElement {
 
   override render() {
     return html`
-      <footer class="app-chrome composer margin:0">
-        <div class="composer-status flex-row container align-items:center justify-content:space-between">
-          <p class=${`app-status chip ${this.statusTone}`} role="status">${this.statusText}</p>
-          <small class="composer-hint">Enter to send · Shift+Enter for newline</small>
+      <footer class="app-chrome margin:0">
+        <div class="flex-row container margin-block-end align-items:center justify-content:space-between">
+          <p class=${`chip ${this.statusTone}`} role="status">${this.statusText}</p>
+          <small class="hidden@s muted-fg">Enter to send · Shift+Enter for newline</small>
         </div>
         <form
-          class="composer-form grid box crowded container wide-inputs margin-block:0"
+          class="grid box crowded container wide-inputs margin-block:0"
           @submit=${(event: SubmitEvent) => {
             event.preventDefault();
             this.submit();
           }}
         >
           <textarea
-            class="message-input"
+            data-cols="1 11"
+            data-cols@s="1"
             aria-label="Message"
             placeholder="Send a message…"
+            rows="5"
+            style="resize: vertical;"
             .value=${this.draft}
             ?disabled=${this.isStreaming}
             @input=${(event: InputEvent) => {
@@ -61,15 +64,19 @@ export class PiMessageComposer extends LitElement {
           ${
             this.isStreaming
               ? html`<button
-              type="button"
-              class="bad"
-              @click=${() => this.dispatchEvent(new CustomEvent("abort-session"))}
-            >
-              Abort
-            </button>`
-              : html`<strong class="composer-submit">
-              <button type="submit" ?disabled=${!this.draft.trim()}>Send</button>
-            </strong>`
+                type="button"
+                class="justify-content:center bad"
+                data-cols="12"
+                data-cols@s="1"
+                @click=${() => this.dispatchEvent(new CustomEvent("abort-session"))}
+              >Abort</button>`
+              : html`<button
+                type="submit"
+                class="justify-content:center"
+                data-cols="12"
+                data-cols@s="1"
+                ?disabled=${!this.draft.trim()}
+              >Send</button>`
           }
         </form>
       </footer>

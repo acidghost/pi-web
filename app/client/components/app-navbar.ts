@@ -83,32 +83,32 @@ export class PiAppNavbar extends LitElement {
       <header class="app-chrome navbar crowded" aria-label="Application bar">
         <nav aria-label="Application">
           <ul role="list">
-            <li class="flex-row align-items:center">
+            <li>
               <span class="app-brand center" aria-hidden="true">π</span>
-              <strong class="app-title">pi web</strong>
-              <small class="app-subtitle">local pi</small>
+              <sub-title class="vh">pi web</sub-title>
             </li>
           </ul>
         </nav>
 
         <nav aria-label="Session metadata">
           <ul role="list">
-            <li class="metadata-chip flex-row align-items:center">
-              <span class="metadata-label allcaps">Session</span>
+            <li class="box padding-block:0 background:none flex-row align-items:center">
+              <span class="small-text allcaps">Session</span>
               <code title=${this.sessionId ?? ""}>${this.sessionId ?? "—"}</code>
             </li>
-            <li class="metadata-chip flex-row align-items:center">
-              <span class="metadata-label allcaps">CWD</span>
+            <li class="box padding-block:0 background:none flex-row align-items:center">
+              <span class="small-text allcaps">CWD</span>
               <code title=${this.metadata?.cwd ?? ""}>${this.metadata?.cwd ?? "—"}</code>
             </li>
-            <li class="metadata-chip flex-row align-items:center">
-              <span class="metadata-label allcaps">Model</span>
-              <span class="model-selects">
+            <li class="box padding-block:0 background:none flex-row align-items:center">
+              <span class="small-text allcaps">Model</span>
+              <span>
                 <select
                   ?disabled=${this.isStreaming || this.providers().length === 0}
                   .value=${this.selectedProvider()}
                   @change=${this.onProviderChange}
                   aria-label="Current provider"
+                  class="border:none"
                 >
                   ${this.providers().map(
                     (provider) => html`<option value=${provider}>${provider}</option>`,
@@ -119,6 +119,7 @@ export class PiAppNavbar extends LitElement {
                   .value=${this.selectedModelId()}
                   @change=${this.onModelChange}
                   aria-label="Current model"
+                  class="border:none"
                 >
                   ${this.modelsForSelectedProvider().map(
                     (model) => html`<option value=${model.id}>${this.modelLabel(model)}</option>`,

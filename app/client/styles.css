@@ -21,8 +21,6 @@
 
   --app-line: color-mix(in srgb, var(--plain-graphical-fg) 82%, transparent);
   --app-glass: color-mix(in srgb, var(--bg) 80%, transparent);
-  --app-message-width: calc(var(--line-length) * 0.72);
-  --app-brand-size: calc(var(--app-rhythm) * 1.75);
   --app-glow: light-dark(#7c3aed, #a78bfa);
   --app-page-bg:
     radial-gradient(
@@ -42,7 +40,6 @@ html,
 body,
 #app {
   block-size: 100%;
-  margin: 0;
 }
 
 body {
@@ -55,6 +52,23 @@ body {
   background: var(--app-page-bg);
 }
 
+.muted-fg {
+  color: var(--muted-fg);
+}
+
+.background\:none {
+  background: none;
+}
+
+.small-text {
+  font-size: 0.68em;
+  letter-spacing: 0.04em;
+}
+
+.text-align\:right {
+  text-align: right;
+}
+
 .app-chrome {
   --graphical-fg: var(--app-line);
 
@@ -64,15 +78,8 @@ body {
   padding: var(--gap);
 }
 
-.app-title {
-  margin: 0;
-  font-size: 0.95em;
-  font-weight: 750;
-  line-height: 1;
-}
-
 .app-brand {
-  flex: 0 0 auto;
+  --app-brand-size: calc(var(--app-rhythm) * 1.75);
   inline-size: var(--app-brand-size);
   block-size: var(--app-brand-size);
   border-radius: calc(var(--border-radius) * 0.75);
@@ -83,90 +90,15 @@ body {
   box-shadow: var(--shadow);
 }
 
-.app-subtitle {
-  margin: 0;
-  color: var(--muted-fg);
-  font-size: 0.72em;
-  line-height: 1;
-}
-
-.metadata-chip {
-  gap: calc(var(--gap) / 3);
-  border: var(--border-width) solid color-mix(in srgb, var(--app-line) 70%, transparent);
-  border-radius: calc(var(--border-radius) * 0.75);
-  padding: calc(var(--gap) / 5) calc(var(--gap) / 2);
-}
-
-.metadata-label {
-  flex: 0 0 auto;
-  color: var(--muted-fg);
-  font-size: 0.68em;
-  letter-spacing: 0.04em;
-}
-
-.metadata-chip code,
-.model-selects,
-.model-selects select:last-child {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-.metadata-chip code {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-selects {
-  gap: calc(var(--gap) / 3);
-}
-
-.model-selects select:first-child {
-  flex: 0 1 8rem;
-  max-inline-size: 8rem;
-}
-
-.app-navbar select,
-.app-navbar button,
-.app-navbar .chip {
-  font-size: 0.85em;
-  line-height: 1.1;
-}
-
-.app-navbar select,
-.app-navbar button {
-  padding-block: calc(var(--gap) / 5);
-}
-
-.composer-form button {
-  white-space: nowrap;
-}
-
-.app-status {
-  display: block;
-  max-inline-size: min(calc(var(--line-length) / 3), 28vi);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transcript {
-  min-block-size: 0;
-  inline-size: 100%;
-  max-inline-size: none;
+#transcript {
   overflow-y: auto;
   padding-block: var(--gap);
   scrollbar-gutter: stable;
 }
 
 .message-card {
-  max-inline-size: min(var(--app-message-width), 100%);
-  margin: 0;
+  max-inline-size: min(calc(var(--line-length) * 0.72), 100%);
   box-shadow: var(--shadow);
-}
-
-.message-text {
   white-space: pre-wrap;
 }
 
@@ -209,75 +141,8 @@ body {
   margin-block: 0;
 }
 
-.composer {
-  border-block-start: var(--border-width) solid var(--app-line);
-}
-
-.composer-status,
-.composer-form {
-  inline-size: 100%;
-}
-
-.composer-status {
-  margin-block-end: calc(var(--gap) / 2);
-}
-
-.composer-status > * {
-  margin: 0;
-}
-
-.composer-hint {
-  color: var(--muted-fg);
-}
-
-.composer-form {
-  grid-template-columns: minmax(0, 1fr) auto;
-  box-shadow: var(--shadow);
-}
-
-.composer-form:focus-within {
-  --graphical-fg: var(--accent);
-
-  box-shadow: var(--shadow-focus);
-}
-
-.message-input {
-  min-block-size: calc(var(--app-rhythm) * 2.5);
-  max-block-size: 32svb;
-  resize: vertical;
-}
-
-.message-input::placeholder {
-  color: var(--faded-fg);
-  opacity: 1;
-  text-align: start;
-}
-
-.composer-submit {
-  display: flex;
-  margin: 0;
-}
-
-.composer-submit > button,
-.composer-form > button {
-  justify-content: center;
-}
-
 @media (max-width: 48rem) {
-  .composer-submit,
-  .composer-form button {
-    inline-size: 100%;
-  }
-
-  .composer-status {
-    justify-content: space-between;
-  }
-
-  .composer-form {
-    grid-template-columns: 1fr;
-  }
-
-  .composer-hint {
+  .hidden\@s {
     display: none;
   }
 }

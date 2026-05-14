@@ -12,7 +12,6 @@ const THINKING_LEVELS = new Set<ThinkingLevel>([
   "high",
   "xhigh",
 ]);
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 function parsePort(value: string | undefined): number {
   if (!value) return 3000;
@@ -23,16 +22,6 @@ function parsePort(value: string | undefined): number {
     );
   }
   return port;
-}
-
-function parseHost(value: string | undefined): string {
-  const host = value?.trim() || "127.0.0.1";
-  if (!LOOPBACK_HOSTS.has(host)) {
-    throw new Error(
-      "PI_WEB_HOST must be a loopback host (127.0.0.1, localhost, or ::1) for this local-only MVP",
-    );
-  }
-  return host;
 }
 
 function expandTilde(path: string): string {
@@ -88,7 +77,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 
   return {
     port: parsePort(env.PI_WEB_PORT),
-    host: parseHost(env.PI_WEB_HOST),
+    host: env.PI_WEB_HOST ?? "localhost",
     cwd: parseCwd(env.PI_WEB_CWD),
     agentDir: env.PI_WEB_AGENT_DIR?.trim()
       ? resolve(expandTilde(env.PI_WEB_AGENT_DIR.trim()))

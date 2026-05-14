@@ -51,7 +51,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--app-page-bg);
 }
 
@@ -64,87 +64,91 @@ body {
   padding: var(--gap);
 }
 
-.app-header {
-  border-block-end: var(--border-width) solid var(--app-line);
-  position: relative;
-  z-index: 1;
-}
-
-.app-header hgroup {
-  min-inline-size: 0;
-}
-
 .app-title {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--gap) / 2);
   margin: 0;
-  font-size: 1em;
+  font-size: 0.95em;
   font-weight: 750;
-  line-height: var(--app-rhythm);
+  line-height: 1;
 }
 
 .app-brand {
   flex: 0 0 auto;
   inline-size: var(--app-brand-size);
   block-size: var(--app-brand-size);
-  border-radius: var(--border-radius);
+  border-radius: calc(var(--border-radius) * 0.75);
   background: var(--accent);
   color: var(--bg);
-  font-size: calc(var(--app-rhythm) * 1.1);
+  font-size: calc(var(--app-rhythm) * 0.95);
   font-weight: 800;
   box-shadow: var(--shadow);
 }
 
 .app-subtitle {
-  margin: calc(var(--gap) / 4) 0 0 calc(var(--app-brand-size) + var(--gap) / 2);
+  margin: 0;
   color: var(--muted-fg);
-  font-size: 0.8em;
-  line-height: var(--app-rhythm);
+  font-size: 0.72em;
+  line-height: 1;
 }
 
-.app-actions button,
-.composer-form button {
-  white-space: nowrap;
+.metadata-chip {
+  gap: calc(var(--gap) / 3);
+  border: var(--border-width) solid color-mix(in srgb, var(--app-line) 70%, transparent);
+  border-radius: calc(var(--border-radius) * 0.75);
+  padding: calc(var(--gap) / 5) calc(var(--gap) / 2);
 }
 
-.app-status {
-  max-inline-size: min(calc(var(--line-length) / 2), 45vi);
+.metadata-label {
+  flex: 0 0 auto;
+  color: var(--muted-fg);
+  font-size: 0.68em;
+  letter-spacing: 0.04em;
+}
+
+.metadata-chip code,
+.model-selects,
+.model-selects select:last-child {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.metadata-chip code {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.session-metadata {
-  --graphical-fg: var(--app-line);
-
-  border-block-end: var(--border-width) solid var(--app-line);
-  background: color-mix(in srgb, var(--bg) 65%, transparent);
-  padding: calc(var(--gap) / 2) var(--gap);
+.model-selects {
+  gap: calc(var(--gap) / 3);
 }
 
-.metadata-list {
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1.5fr) minmax(16rem, 1fr);
+.model-selects select:first-child {
+  flex: 0 1 8rem;
+  max-inline-size: 8rem;
 }
 
-.metadata-card {
-  min-inline-size: 0;
-  margin: 0;
+.app-navbar select,
+.app-navbar button,
+.app-navbar .chip {
+  font-size: 0.85em;
+  line-height: 1.1;
 }
 
-.metadata-label {
-  color: var(--muted-fg);
-  font-size: 0.75em;
+.app-navbar select,
+.app-navbar button {
+  padding-block: calc(var(--gap) / 5);
 }
 
-.metadata-card dd {
-  margin: 0;
+.composer-form button {
+  white-space: nowrap;
 }
 
-.metadata-card code {
+.app-status {
   display: block;
-  margin-block-start: calc(var(--gap) / 4);
-  overflow-wrap: anywhere;
+  max-inline-size: min(calc(var(--line-length) / 3), 28vi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .transcript {
@@ -260,30 +264,17 @@ body {
 }
 
 @media (max-width: 48rem) {
-  .app-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .app-actions,
   .composer-submit,
   .composer-form button {
     inline-size: 100%;
   }
 
-  .app-actions,
   .composer-status {
     justify-content: space-between;
   }
 
-  .metadata-list,
   .composer-form {
     grid-template-columns: 1fr;
-  }
-
-  .composer-status {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .composer-hint {

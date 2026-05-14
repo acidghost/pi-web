@@ -1,8 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import "./components/app-header";
+import "./components/app-navbar";
 import "./components/message-composer";
-import "./components/session-metadata";
 import "./components/transcript";
 import { state } from "./state";
 import type { StatusTone } from "./types";
@@ -33,27 +32,17 @@ export class PiWebApp extends LitElement {
   }
 
   override render() {
-    const statusText = this.statusText();
-    const statusTone = this.statusTone();
-
     return html`
-      <pi-app-header
-        class="contents"
-        .statusText=${statusText}
-        .statusTone=${statusTone}
-        .isStreaming=${state.isStreaming}
-        @new-session=${() => this.onNewSession?.()}
-      ></pi-app-header>
-
-      <pi-session-metadata
+      <pi-app-navbar
         class="contents"
         .sessionId=${state.sessionId}
         .metadata=${state.metadata}
         .models=${state.models}
         .isStreaming=${state.isStreaming}
+        @new-session=${() => this.onNewSession?.()}
         @select-model=${(event: CustomEvent<{ provider: string; id: string }>) =>
           this.onSelectModel?.(event.detail.provider, event.detail.id)}
-      ></pi-session-metadata>
+      ></pi-app-navbar>
 
       <pi-transcript
         class="contents"
@@ -63,8 +52,8 @@ export class PiWebApp extends LitElement {
 
       <pi-message-composer
         class="contents"
-        .statusText=${statusText}
-        .statusTone=${statusTone}
+        .statusText=${this.statusText()}
+        .statusTone=${this.statusTone()}
         .isStreaming=${state.isStreaming}
         @send-message=${(event: CustomEvent<{ message: string }>) =>
           this.onSend?.(event.detail.message)}

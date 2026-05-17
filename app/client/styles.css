@@ -98,8 +98,25 @@ body {
 
 .message-card {
   max-inline-size: min(calc(var(--line-length) * 0.72), 100%);
-  box-shadow: var(--shadow);
-  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content blockquote,
+.markdown-content pre,
+.markdown-content table {
+  margin-block: calc(var(--gap) * 0.6);
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-inline-start: calc(var(--gap) * 1.5);
+}
+
+.markdown-content li + li {
+  margin-block-start: calc(var(--gap) * 0.2);
 }
 
 .tool-state {

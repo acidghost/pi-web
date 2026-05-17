@@ -4,7 +4,7 @@
 - [x] persistent sessions instead of in-memory
 - [x] model selector
 - [ ] session list / sidebar
-- [ ] markdown rendering
+- [x] markdown rendering
 - [ ] syntax highlighting
 - [ ] prompt template UI
 - [ ] extension UI integration

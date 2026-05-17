@@ -102,14 +102,6 @@ body {
   white-space: pre-wrap;
 }
 
-.message[data-author="user"] .message-text {
-  border-end-end-radius: calc(var(--border-radius) / 3);
-}
-
-.message[data-author="assistant"] .message-text {
-  border-start-start-radius: calc(var(--border-radius) / 3);
-}
-
 .tool-state {
   color: var(--accent);
 }

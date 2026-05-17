@@ -5,7 +5,8 @@
 - [x] model selector
 - [ ] session list / sidebar
 - [x] markdown rendering
-- [ ] syntax highlighting
+- [x] syntax highlighting in `read` tool calls
+- [ ] syntax highlighting of markdown code blocks
 - [ ] prompt template UI
 - [ ] extension UI integration
 - [ ] runtime-backed `/new`, `/resume`, `/fork`

@@ -52,6 +52,10 @@ body {
   background: var(--app-page-bg);
 }
 
+.accent-fg {
+  color: var(--accent);
+}
+
 .muted-fg {
   color: var(--muted-fg);
 }
@@ -119,20 +123,13 @@ body {
   margin-block-start: calc(var(--gap) * 0.2);
 }
 
-.tool-state {
-  color: var(--accent);
-}
-
-.tool-name {
-  min-inline-size: 0;
-  overflow: hidden;
-  color: var(--fg);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tool-call pre {
-  white-space: pre-wrap;
+.highlighted pre {
+  overflow-x: auto;
+  border: var(--border-width) solid var(--app-line);
+  border-radius: var(--border-radius);
+  padding: var(--gap);
+  white-space: pre;
+  overflow-wrap: normal;
 }
 
 .empty-state {

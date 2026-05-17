@@ -80,7 +80,7 @@ export class PiAppNavbar extends LitElement {
 
   override render() {
     return html`
-      <header class="app-chrome navbar crowded" aria-label="Application bar">
+      <header class="app-chrome navbar crowded margin:0" aria-label="Application bar">
         <nav aria-label="Application">
           <ul role="list">
             <li>

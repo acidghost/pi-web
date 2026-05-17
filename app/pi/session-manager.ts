@@ -117,15 +117,10 @@ export async function getOrOpenWebSession(
   const info = await findPersistedSession(config, id);
   if (!info) return undefined;
 
-  return createWebSessionFromManager(
-    config,
-    services,
-    SessionManager.open(info.path),
-    {
-      createdAt: info.created.getTime(),
-      updatedAt: info.modified.getTime(),
-    },
-  );
+  return createWebSessionFromManager(config, services, SessionManager.open(info.path), {
+    createdAt: info.created.getTime(),
+    updatedAt: info.modified.getTime(),
+  });
 }
 
 export async function listWebSessions(config: AppConfig) {

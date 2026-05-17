@@ -12,9 +12,8 @@ async function buildExecutable() {
   await rm(outdir, { recursive: true, force: true });
 
   const result = await Bun.build({
-    compile: true,
+    compile: { outfile },
     target: "bun",
-    outdir: outdir,
     entrypoints: [entrypoint],
   });
 
@@ -25,9 +24,6 @@ async function buildExecutable() {
 
   if (!result.success) process.exit(1);
 
-  const ogOutfile = join(outdir, "server");
-  await cp(ogOutfile, outfile);
-  await rm(ogOutfile);
   await chmod(outfile, 0o755);
   console.log(`[build] wrote ${outfile} in ${Math.round(performance.now() - started)}ms`);
 }

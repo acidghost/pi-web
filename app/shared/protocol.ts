@@ -284,6 +284,24 @@ export const SessionMetadataResponseSchema = z
   })
   .strict();
 
+export const SessionListItemSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().optional(),
+    firstMessage: z.string(),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    messageCount: z.number(),
+    isActive: z.boolean(),
+  })
+  .strict();
+
+export const ListSessionsResponseSchema = z
+  .object({
+    sessions: z.array(SessionListItemSchema),
+  })
+  .strict();
+
 export const CreateSessionResponseSchema = z
   .object({
     sessionId: z.string(),
@@ -360,6 +378,8 @@ export type BrowserEvent = z.infer<typeof BrowserEventSchema>;
 export type UiMessage = z.infer<typeof UiMessageSchema>;
 export type ModelSummary = z.infer<typeof ModelSummarySchema>;
 export type SessionMetadataResponse = z.infer<typeof SessionMetadataResponseSchema>;
+export type SessionListItem = z.infer<typeof SessionListItemSchema>;
+export type ListSessionsResponse = z.infer<typeof ListSessionsResponseSchema>;
 export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 export type MessagesResponse = z.infer<typeof MessagesResponseSchema>;
 export type PromptRequest = z.infer<typeof PromptRequestSchema>;

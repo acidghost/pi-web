@@ -7,7 +7,8 @@ import {
   createServices,
   createWebSession,
   disposeAllSessions,
-  getWebSession,
+  getOrOpenWebSession,
+  listWebSessions,
   modelToJson,
   notifyError,
   notifyState,
@@ -22,6 +23,7 @@ import {
   CreateSessionResponseSchema,
   formatZodError,
   HealthResponseSchema,
+  ListSessionsResponseSchema,
   MessagesResponseSchema,
   ModelsResponseSchema,
   PromptRequestSchema,
@@ -78,13 +80,17 @@ async function handleCreateSession(): Promise<Response> {
   return json(CreateSessionResponseSchema, { sessionId: webSession.id }, 201);
 }
 
+async function handleListSessions(): Promise<Response> {
+  return json(ListSessionsResponseSchema, { sessions: await listWebSessions(config) });
+}
+
 async function handleWithSession(
   request: BunRequest,
   handler: (session: WebSession, request: BunRequest) => Promise<Response>,
 ): Promise<Response> {
   const id = request.params.id;
   if (!id) return notFound();
-  const webSession = getWebSession(id);
+  const webSession = await getOrOpenWebSession(config, services, id);
   if (!webSession) return notFound();
   return await handler(webSession, request);
 }
@@ -260,6 +266,7 @@ const server = Bun.serve({
       GET: apiRoute(() => handleModels()),
     },
     "/api/sessions": {
+      GET: apiRoute(() => handleListSessions()),
       POST: apiRoute(() => handleCreateSession()),
     },
     "/api/sessions/:id": {

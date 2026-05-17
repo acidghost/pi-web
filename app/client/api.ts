@@ -1,6 +1,7 @@
 import type {
   AbortResponse,
   CreateSessionResponse,
+  ListSessionsResponse,
   MessagesResponse,
   ModelsResponse,
   PromptRequest,
@@ -14,6 +15,7 @@ import {
   ApiErrorResponseSchema,
   CreateSessionResponseSchema,
   formatZodError,
+  ListSessionsResponseSchema,
   MessagesResponseSchema,
   ModelsResponseSchema,
   PromptResponseSchema,
@@ -43,6 +45,10 @@ async function fetchJson<T>(schema: z.ZodType<T>, url: string, options?: Request
 
 export function createSession(): Promise<CreateSessionResponse> {
   return fetchJson(CreateSessionResponseSchema, "/api/sessions", { method: "POST" });
+}
+
+export function listSessions(): Promise<ListSessionsResponse> {
+  return fetchJson(ListSessionsResponseSchema, "/api/sessions");
 }
 
 export function getSession(sessionId: string): Promise<SessionMetadataResponse> {

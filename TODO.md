@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] `edit` / `write` tools
+- [x] `edit` / `write` tools
 - [x] persistent sessions instead of in-memory
 - [x] model selector
 - [ ] session list / sidebar

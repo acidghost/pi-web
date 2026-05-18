@@ -14,14 +14,14 @@ const bundledLanguageNames = new Set<string>(
     .map((name) => name.toLowerCase()),
 );
 
-export type HighlightReadOutputResult =
+export type HighlightPathContentResult =
   | { kind: "html"; html: string; language: BundledLanguage }
   | { kind: "plain" };
 
-export async function highlightReadOutput(
+export async function highlightPathContent(
   path: string,
   code: string,
-): Promise<HighlightReadOutputResult> {
+): Promise<HighlightPathContentResult> {
   const language = inferLanguageFromPath(path);
   if (!language) return { kind: "plain" };
 

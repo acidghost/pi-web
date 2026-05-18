@@ -8,7 +8,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { BrowserEvent } from "@shared/protocol";
 
-export type SupportedToolName = "read" | "bash";
+export type SupportedToolName = "read" | "bash" | "edit" | "write";
 
 export interface AppConfig {
   port: number;

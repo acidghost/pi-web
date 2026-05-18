@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { AppConfig, SupportedToolName } from "./types.ts";
 
-const SUPPORTED_TOOLS = new Set<SupportedToolName>(["read", "bash"]);
+const SUPPORTED_TOOLS = new Set<SupportedToolName>(["read", "bash", "edit", "write"]);
 const THINKING_LEVELS = new Set<ThinkingLevel>([
   "off",
   "minimal",
@@ -49,7 +49,7 @@ function parseTools(value: string | undefined): SupportedToolName[] {
   for (const tool of unique) {
     if (!SUPPORTED_TOOLS.has(tool as SupportedToolName)) {
       throw new Error(
-        `Unsupported PI_WEB_TOOLS entry ${JSON.stringify(tool)}. MVP supports only: read,bash`,
+        `Unsupported PI_WEB_TOOLS entry ${JSON.stringify(tool)}. Supported tools: read,bash,edit,write`,
       );
     }
   }

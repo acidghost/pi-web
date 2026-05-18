@@ -123,13 +123,55 @@ body {
   margin-block-start: calc(var(--gap) * 0.2);
 }
 
-.highlighted pre {
+.highlighted pre,
+.tool-diff,
+.tool-edit-old,
+.tool-edit-new,
+.tool-error-output,
+.tool-raw-output {
   overflow-x: auto;
   border: var(--border-width) solid var(--app-line);
   border-radius: var(--border-radius);
   padding: var(--gap);
   white-space: pre;
   overflow-wrap: normal;
+}
+
+.tool-result-summary {
+  margin-block: calc(var(--gap) * 0.6) 0;
+}
+
+.tool-error-output {
+  border-color: color-mix(in srgb, var(--bad-fg) 50%, var(--app-line));
+  color: var(--bad-fg);
+}
+
+.tool-diff-line {
+  display: block;
+  min-inline-size: max-content;
+}
+
+.tool-diff-hunk {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tool-diff-add,
+.tool-edit-new {
+  background: color-mix(in srgb, var(--ok-fg) 20%, transparent);
+}
+
+.tool-diff-delete,
+.tool-edit-old {
+  background: color-mix(in srgb, var(--bad-fg) 20%, transparent);
+}
+
+.tool-edit-item + .tool-edit-item {
+  margin-block-start: var(--gap);
+}
+
+.tool-edit-label {
+  margin-block: calc(var(--gap) * 0.6) calc(var(--gap) * 0.25);
 }
 
 .empty-state {

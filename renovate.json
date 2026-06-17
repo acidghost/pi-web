@@ -11,6 +11,10 @@
   "minimumReleaseAge": "7 days",
   "packageRules": [
     {
+      "matchPackageNames": ["@earendil-works/**"],
+      "groupName": "@earendil-works packages"
+    },
+    {
       "matchUpdateTypes": ["patch"],
       "addLabels": ["lcm/approve"]
     }

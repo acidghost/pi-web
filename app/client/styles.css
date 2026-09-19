@@ -280,6 +280,18 @@ body {
   overflow-wrap: anywhere;
 }
 
+.message-card > summary .accent-fg {
+  flex-shrink: 0;
+}
+
+.message-card > summary .tool-call-command {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .markdown-content p,
 .markdown-content ul,
 .markdown-content ol,
@@ -314,6 +326,15 @@ body {
   padding: var(--gap);
   white-space: pre;
   overflow-wrap: normal;
+}
+
+.highlighted .line-number {
+  display: inline-block;
+  min-inline-size: 3.5ch;
+  margin-inline-end: 1ch;
+  text-align: right;
+  color: var(--muted-fg);
+  user-select: none;
 }
 
 .tool-result-summary {

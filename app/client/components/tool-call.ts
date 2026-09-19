@@ -3,8 +3,9 @@ import { contentText } from "@shared/message-content";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import type { BundledLanguage } from "shiki";
 import { state } from "../state";
-import { type HighlightPathContentResult, highlightPathContent } from "../syntax-highlight";
+import { type HighlightResult, highlightCode, inferLanguageFromPath } from "../syntax-highlight";
 
 type EditReplacement = {
   oldText: string;
@@ -25,7 +26,7 @@ export class PiToolCall extends LitElement {
   result?: ToolResultMessage;
 
   private highlightKey?: string;
-  private highlightResult?: HighlightPathContentResult;
+  private highlightResult?: HighlightResult;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -58,9 +59,39 @@ export class PiToolCall extends LitElement {
     if (this.call.name === "read") return this.renderReadOutput(output);
     if (this.call.name === "write") return this.renderWriteOutput(output);
     if (this.call.name === "edit") return this.renderEditOutput(output);
+    if (this.call.name === "bash") return this.renderBashOutput(output);
 
     return {
       content: html`<pre class="tool-raw-output">${output || safeJson(this.call.arguments)}</pre>`,
+    };
+  }
+
+  private renderBashOutput(output: string): RenderOutput {
+    if (!this.call) return { content: html`Loading...` };
+    const command = getBashCommand(this.call.arguments);
+    const fallback = output || safeJson(this.call.arguments);
+
+    if (command === undefined) {
+      return { content: html`<pre class="tool-raw-output">${fallback}</pre>` };
+    }
+
+    const commandSummary = summarizeCommand(command);
+
+    return {
+      title: html`<code class="tool-call-command" title=${command}>${commandSummary}</code>`,
+      content: html`
+        ${this.renderHighlightedContent(`bash\0${command}`, command, "bash")}
+        ${
+          output && this.result?.isError
+            ? html`<pre class="tool-error-output">${output}</pre>`
+            : nothing
+        }
+        ${
+          output && !this.result?.isError
+            ? html`<pre class="tool-raw-output">${output}</pre>`
+            : nothing
+        }
+      `,
     };
   }
 
@@ -73,12 +104,29 @@ export class PiToolCall extends LitElement {
       };
     }
 
-    const content =
-      output && this.result && !this.result.isError
-        ? this.renderHighlightedPathContent(readPath, output)
-        : html`<pre class="tool-raw-output">${output || safeJson(this.call?.arguments)}</pre>`;
+    const { offset, limit } = getReadRange(this.call.arguments);
+    const hasFileContent = Boolean(output && this.result && !this.result.isError);
+    const { content: fileContent, note } = hasFileContent
+      ? splitReadNote(output)
+      : { content: "", note: undefined };
+    const lineCount = fileContent ? countLines(fileContent) : limit;
+    const rangeLabel = readRangeLabel(offset, limit, lineCount);
+    const title = html`<code>${rangeLabel ? `${readPath}:${rangeLabel}` : readPath}</code>`;
 
-    return { title: html`<code>${readPath}</code>`, content };
+    if (!hasFileContent || !fileContent) {
+      return {
+        title,
+        content: html`<pre class="tool-raw-output">${output || safeJson(this.call.arguments)}</pre>`,
+      };
+    }
+
+    return {
+      title,
+      content: html`
+        ${this.renderHighlightedPathContent(readPath, fileContent, offset ?? 1)}
+        ${note ? html`<p class="tool-result-summary muted-fg"><small>${note}</small></p>` : nothing}
+      `,
+    };
   }
 
   private renderWriteOutput(output: string): RenderOutput {
@@ -102,7 +150,7 @@ export class PiToolCall extends LitElement {
             ? html`<pre class="tool-error-output">${output}</pre>`
             : nothing
         }
-        ${this.renderHighlightedPathContent(writePath, fileContent)}
+        ${this.renderHighlightedPathContent(writePath, fileContent, 1)}
         ${
           !this.result?.isError && output
             ? html`<p class="tool-result-summary muted-fg"><small>${output}</small></p>`
@@ -151,12 +199,32 @@ export class PiToolCall extends LitElement {
     };
   }
 
-  private renderHighlightedPathContent(path: string, output: string): TemplateResult {
-    const key = `${this.call?.id ?? ""}\0${path}\0${output}`;
+  private renderHighlightedPathContent(
+    path: string,
+    output: string,
+    startLine?: number,
+  ): TemplateResult {
+    const language = inferLanguageFromPath(path);
+    if (!language) return html`<pre class="tool-raw-output">${output}</pre>`;
+
+    return this.renderHighlightedContent(
+      `${this.call?.id ?? ""}\0${path}\0${startLine ?? ""}\0${output}`,
+      output,
+      language,
+      startLine !== undefined ? { start: startLine } : undefined,
+    );
+  }
+
+  private renderHighlightedContent(
+    key: string,
+    code: string,
+    language: BundledLanguage,
+    lineNumbers?: { start: number },
+  ): TemplateResult {
     if (this.highlightKey !== key) {
       this.highlightKey = key;
       this.highlightResult = undefined;
-      void highlightPathContent(path, output).then((result) => {
+      void highlightCode(code, language, lineNumbers).then((result) => {
         if (this.highlightKey !== key) return;
 
         this.highlightResult = result;
@@ -168,7 +236,7 @@ export class PiToolCall extends LitElement {
       return html`<div class="highlighted">${unsafeHTML(this.highlightResult.html)}</div>`;
     }
 
-    return html`<pre class="tool-raw-output">${output}</pre>`;
+    return html`<pre class="tool-raw-output">${code}</pre>`;
   }
 
   private renderDiff(diff: string): TemplateResult {
@@ -193,6 +261,64 @@ export class PiToolCall extends LitElement {
       </div>
     `;
   }
+}
+
+const COMMAND_SUMMARY_MAX = 80;
+
+function summarizeCommand(command: string): string {
+  const normalized = command.replace(/\s+/g, " ").trim();
+  if (normalized.length <= COMMAND_SUMMARY_MAX) return normalized;
+
+  return `${normalized.slice(0, COMMAND_SUMMARY_MAX - 1)}…`;
+}
+
+const READ_NOTE_PATTERN =
+  /\n\n\[(?:Showing lines \d+-\d+ of \d+|\d+ more lines in file)[^\]]*\]\s*$/;
+const FIRST_LINE_NOTE_PATTERN = /^\[Line \d+ is [^\]]*\]$/;
+
+/**
+ * Split read output into file content and pi's trailing continuation note
+ * ("[Showing lines 5-10 of 100. Use offset=11 to continue.]" and friends),
+ * so the note is not rendered as numbered, highlighted code.
+ */
+function splitReadNote(output: string): { content: string; note?: string } {
+  const stripped = output.replace(/\n$/, "");
+  if (FIRST_LINE_NOTE_PATTERN.test(stripped)) return { content: "", note: stripped };
+
+  const match = stripped.match(READ_NOTE_PATTERN);
+  if (!match || match.index === undefined) return { content: stripped };
+
+  return {
+    content: stripped.slice(0, match.index),
+    note: match[0].trim(),
+  };
+}
+
+function getReadRange<T>(record: Record<string, T>): { offset?: number; limit?: number } {
+  return {
+    offset: typeof record?.offset === "number" ? record.offset : undefined,
+    limit: typeof record?.limit === "number" ? record.limit : undefined,
+  };
+}
+
+function readRangeLabel(
+  offset: number | undefined,
+  limit: number | undefined,
+  lineCount: number | undefined,
+): string | undefined {
+  if ((offset === undefined && limit === undefined) || !lineCount) return undefined;
+
+  const start = offset ?? 1;
+  return `${start}-${start + lineCount - 1}`;
+}
+
+function countLines(text: string): number {
+  return text.split("\n").length;
+}
+
+function getBashCommand<T>(record: Record<string, T>): string | undefined {
+  const command = record?.command;
+  return typeof command === "string" ? command : undefined;
 }
 
 function getToolPath<T>(record: Record<string, T>): string | undefined {

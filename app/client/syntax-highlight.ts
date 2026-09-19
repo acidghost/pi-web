@@ -3,6 +3,7 @@ import {
   type BundledTheme,
   bundledLanguagesInfo,
   getSingletonHighlighter,
+  type ShikiTransformer,
 } from "shiki";
 
 const LIGHT_THEME = "github-light" satisfies BundledTheme;
@@ -14,17 +15,15 @@ const bundledLanguageNames = new Set<string>(
     .map((name) => name.toLowerCase()),
 );
 
-export type HighlightPathContentResult =
+export type HighlightResult =
   | { kind: "html"; html: string; language: BundledLanguage }
   | { kind: "plain" };
 
-export async function highlightPathContent(
-  path: string,
+export async function highlightCode(
   code: string,
-): Promise<HighlightPathContentResult> {
-  const language = inferLanguageFromPath(path);
-  if (!language) return { kind: "plain" };
-
+  language: BundledLanguage,
+  lineNumbers?: { start: number },
+): Promise<HighlightResult> {
   try {
     const highlighter = await getSingletonHighlighter({
       themes: [LIGHT_THEME, DARK_THEME],
@@ -42,12 +41,34 @@ export async function highlightPathContent(
         },
         defaultColor: "light-dark()",
         mergeSameStyleTokens: true,
+        transformers: lineNumbers ? [lineNumberTransformer(lineNumbers.start)] : [],
       }),
       language,
     };
   } catch {
     return { kind: "plain" };
   }
+}
+
+export async function highlightPathContent(path: string, code: string): Promise<HighlightResult> {
+  const language = inferLanguageFromPath(path);
+  if (!language) return { kind: "plain" };
+
+  return highlightCode(code, language);
+}
+
+function lineNumberTransformer(start: number): ShikiTransformer {
+  return {
+    name: "pi-web:line-numbers",
+    line(node, line) {
+      node.children.unshift({
+        type: "element",
+        tagName: "span",
+        properties: { class: "line-number" },
+        children: [{ type: "text", value: String(start + line - 1) }],
+      });
+    },
+  };
 }
 
 export function inferLanguageFromPath(path: string): BundledLanguage | undefined {

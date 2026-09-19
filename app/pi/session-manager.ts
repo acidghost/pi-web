@@ -1,9 +1,8 @@
 import { join } from "node:path";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import {
-  AuthStorage,
   createAgentSession,
-  ModelRegistry,
+  ModelRuntime,
   type SessionInfo,
   SessionManager,
   SettingsManager,
@@ -14,27 +13,24 @@ import type { AppConfig, AppServices, SseSubscriber, WebSession } from "./types.
 
 export const webSessions = new Map<string, WebSession>();
 
-export function createServices(config: AppConfig): AppServices {
-  const authStorage = AuthStorage.create(
-    config.agentDir ? join(config.agentDir, "auth.json") : undefined,
-  );
-  const modelRegistry = ModelRegistry.create(
-    authStorage,
-    config.agentDir ? join(config.agentDir, "models.json") : undefined,
-  );
+export async function createServices(config: AppConfig): Promise<AppServices> {
+  const modelRuntime = await ModelRuntime.create({
+    authPath: config.agentDir ? join(config.agentDir, "auth.json") : undefined,
+    modelsPath: config.agentDir ? join(config.agentDir, "models.json") : undefined,
+  });
   const settingsManager = SettingsManager.create(config.cwd, config.agentDir);
 
-  const explicitModel = resolveExplicitModel(config, modelRegistry);
+  const explicitModel = resolveExplicitModel(config, modelRuntime);
 
-  return { authStorage, modelRegistry, settingsManager, explicitModel };
+  return { modelRuntime, settingsManager, explicitModel };
 }
 
 function resolveExplicitModel(
   config: AppConfig,
-  modelRegistry: ModelRegistry,
+  modelRuntime: ModelRuntime,
 ): Model<Api> | undefined {
   if (!config.provider || !config.modelId) return undefined;
-  const model = modelRegistry.find(config.provider, config.modelId);
+  const model = modelRuntime.getModel(config.provider, config.modelId);
   if (!model) throw new Error(`Configured model not found: ${config.provider}/${config.modelId}`);
   return model;
 }
@@ -50,8 +46,7 @@ async function createWebSessionFromManager(
   const { session, modelFallbackMessage } = await createAgentSession({
     cwd: config.cwd,
     agentDir: config.agentDir,
-    authStorage: services.authStorage,
-    modelRegistry: services.modelRegistry,
+    modelRuntime: services.modelRuntime,
     settingsManager: services.settingsManager,
     sessionManager,
     tools: config.tools,

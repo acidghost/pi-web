@@ -34,7 +34,7 @@ import {
 } from "./shared/protocol.ts";
 
 const config = loadConfig();
-const services = createServices(config);
+const services = await createServices(config);
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -209,7 +209,7 @@ async function handleEvents(webSession: WebSession, request: Request): Promise<R
 
 function handleModels(): Response {
   return json(ModelsResponseSchema, {
-    models: services.modelRegistry.getAvailable().map((model) => ({
+    models: services.modelRuntime.getAvailableSnapshot().map((model) => ({
       provider: model.provider,
       id: model.id,
       name: model.name || model.id,
@@ -224,10 +224,10 @@ async function handleSetModel(webSession: WebSession, request: Request): Promise
 
   const { provider, id: modelId } = await parseJsonBody(request, SetModelRequestSchema);
 
-  const model = services.modelRegistry.find(provider, modelId);
+  const model = services.modelRuntime.getModel(provider, modelId);
   if (!model) return jsonError(`Model not found: ${provider}/${modelId}`, 404);
 
-  const available = services.modelRegistry.getAvailable();
+  const available = services.modelRuntime.getAvailableSnapshot();
   if (!available.some((candidate) => candidate.provider === provider && candidate.id === modelId)) {
     return jsonError(`Model is not available: ${provider}/${modelId}`, 400);
   }

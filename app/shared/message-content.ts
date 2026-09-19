@@ -4,14 +4,20 @@ export interface ContentTextOptions {
   includeImages?: boolean;
   includeThinking?: boolean;
   includeToolCalls?: boolean;
+  trim?: boolean;
 }
 
 export function contentText(content: Message["content"], options: ContentTextOptions = {}): string {
-  const { includeImages = true, includeThinking = true, includeToolCalls = true } = options;
+  const {
+    includeImages = true,
+    includeThinking = true,
+    includeToolCalls = true,
+    trim = true,
+  } = options;
 
   if (typeof content === "string") return content;
 
-  return content
+  const text = content
     .map((block) => {
       switch (block.type) {
         case "image":
@@ -27,6 +33,7 @@ export function contentText(content: Message["content"], options: ContentTextOpt
       }
     })
     .filter(Boolean)
-    .join("\n")
-    .trim();
+    .join("\n");
+
+  return trim ? text.trim() : text;
 }

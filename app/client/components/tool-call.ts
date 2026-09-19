@@ -1,11 +1,15 @@
 import type { ToolCall, ToolResultMessage } from "@earendil-works/pi-ai";
+import {
+  type FileContents,
+  FileDiff,
+  type FileDiffMetadata,
+  File as PierreFile,
+  parsePatchFiles,
+} from "@pierre/diffs";
 import { contentText } from "@shared/message-content";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import type { BundledLanguage } from "shiki";
 import { state } from "../state";
-import { type HighlightResult, highlightCode, inferLanguageFromPath } from "../syntax-highlight";
 
 type EditReplacement = {
   oldText: string;
@@ -17,6 +21,25 @@ type RenderOutput = {
   content: TemplateResult;
 };
 
+type CodeViewerSpec =
+  | {
+      kind: "file";
+      key: string;
+      file: FileContents;
+      disableLineNumbers?: boolean;
+    }
+  | {
+      kind: "diff";
+      key: string;
+      fileDiff: FileDiffMetadata;
+    };
+
+type MountedCodeViewer = {
+  key: string;
+  host: HTMLElement;
+  instance: PierreFile | FileDiff;
+};
+
 @customElement("pi-tool-call")
 export class PiToolCall extends LitElement {
   @property({ attribute: false })
@@ -25,17 +48,25 @@ export class PiToolCall extends LitElement {
   @property({ attribute: false })
   result?: ToolResultMessage;
 
-  private highlightKey?: string;
-  private highlightResult?: HighlightResult;
+  private codeViewer?: MountedCodeViewer;
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
   }
 
+  protected override updated(): void {
+    this.syncCodeViewer();
+  }
+
+  public override disconnectedCallback(): void {
+    this.destroyCodeViewer();
+    super.disconnectedCallback();
+  }
+
   override render() {
     if (!this.call) return nothing;
 
-    const output = this.result ? contentText(this.result.content).trim() : "";
+    const output = this.result ? contentText(this.result.content, { trim: false }).trimEnd() : "";
     const pending = state.pendingToolCalls.has(this.call.id) && !this.result;
     const tone = this.result?.isError ? "bad" : pending ? "warn" : "plain";
     const stateLabel = pending ? "Running" : this.result?.isError ? "Failed" : "Tool";
@@ -80,7 +111,7 @@ export class PiToolCall extends LitElement {
     return {
       title: html`<code class="tool-call-command" title=${command}>${commandSummary}</code>`,
       content: html`
-        ${this.renderHighlightedContent(`bash\0${command}`, command, "bash")}
+        ${this.renderCodeViewerPlaceholder()}
         ${
           output && this.result?.isError
             ? html`<pre class="tool-error-output">${output}</pre>`
@@ -123,7 +154,7 @@ export class PiToolCall extends LitElement {
     return {
       title,
       content: html`
-        ${this.renderHighlightedPathContent(readPath, fileContent, offset ?? 1)}
+        ${this.renderCodeViewerPlaceholder()}
         ${note ? html`<p class="tool-result-summary muted-fg"><small>${note}</small></p>` : nothing}
       `,
     };
@@ -150,7 +181,7 @@ export class PiToolCall extends LitElement {
             ? html`<pre class="tool-error-output">${output}</pre>`
             : nothing
         }
-        ${this.renderHighlightedPathContent(writePath, fileContent, 1)}
+        ${this.renderCodeViewerPlaceholder()}
         ${
           !this.result?.isError && output
             ? html`<p class="tool-result-summary muted-fg"><small>${output}</small></p>`
@@ -164,29 +195,26 @@ export class PiToolCall extends LitElement {
     if (!this.call) return { content: html`Loading...` };
     const editPath = getToolPath(this.call.arguments);
     const diff = getEditDiff(this.result?.details);
+    const fileDiff = getEditFileDiff(this.result?.details);
     const edits = getEditList(this.call.arguments);
     const fallback = output || safeJson(this.call.arguments);
+    const change = fileDiff
+      ? this.renderCodeViewerPlaceholder()
+      : diff
+        ? this.renderDiff(diff)
+        : edits.length
+          ? this.renderEditList(edits)
+          : undefined;
 
     let content: TemplateResult;
     if (this.result?.isError) {
       content = html`
         ${output ? html`<pre class="tool-error-output">${output}</pre>` : nothing}
-        ${
-          diff
-            ? this.renderDiff(diff)
-            : edits.length
-              ? this.renderEditList(edits)
-              : html`<pre class="tool-raw-output">${fallback}</pre>`
-        }
+        ${change ?? html`<pre class="tool-raw-output">${fallback}</pre>`}
       `;
-    } else if (diff) {
+    } else if (change) {
       content = html`
-        ${this.renderDiff(diff)}
-        ${output ? html`<p class="tool-result-summary muted-fg"><small>${output}</small></p>` : nothing}
-      `;
-    } else if (edits.length) {
-      content = html`
-        ${this.renderEditList(edits)}
+        ${change}
         ${output ? html`<p class="tool-result-summary muted-fg"><small>${output}</small></p>` : nothing}
       `;
     } else {
@@ -199,44 +227,8 @@ export class PiToolCall extends LitElement {
     };
   }
 
-  private renderHighlightedPathContent(
-    path: string,
-    output: string,
-    startLine?: number,
-  ): TemplateResult {
-    const language = inferLanguageFromPath(path);
-    if (!language) return html`<pre class="tool-raw-output">${output}</pre>`;
-
-    return this.renderHighlightedContent(
-      `${this.call?.id ?? ""}\0${path}\0${startLine ?? ""}\0${output}`,
-      output,
-      language,
-      startLine !== undefined ? { start: startLine } : undefined,
-    );
-  }
-
-  private renderHighlightedContent(
-    key: string,
-    code: string,
-    language: BundledLanguage,
-    lineNumbers?: { start: number },
-  ): TemplateResult {
-    if (this.highlightKey !== key) {
-      this.highlightKey = key;
-      this.highlightResult = undefined;
-      void highlightCode(code, language, lineNumbers).then((result) => {
-        if (this.highlightKey !== key) return;
-
-        this.highlightResult = result;
-        this.requestUpdate();
-      });
-    }
-
-    if (this.highlightResult?.kind === "html") {
-      return html`<div class="highlighted">${unsafeHTML(this.highlightResult.html)}</div>`;
-    }
-
-    return html`<pre class="tool-raw-output">${code}</pre>`;
+  private renderCodeViewerPlaceholder(): TemplateResult {
+    return html`<div class="tool-code-view" data-pierre-code-view></div>`;
   }
 
   private renderDiff(diff: string): TemplateResult {
@@ -260,6 +252,106 @@ export class PiToolCall extends LitElement {
         )}
       </div>
     `;
+  }
+
+  private syncCodeViewer(): void {
+    const host = this.querySelector<HTMLElement>("[data-pierre-code-view]");
+    const spec = this.getCodeViewerSpec();
+
+    if (!host || !spec) {
+      this.destroyCodeViewer();
+      return;
+    }
+
+    if (this.codeViewer?.host === host && this.codeViewer.key === spec.key) return;
+
+    this.destroyCodeViewer();
+
+    if (spec.kind === "file") {
+      const instance = new PierreFile({
+        theme: { dark: "pierre-dark", light: "pierre-light" },
+        overflow: "scroll",
+        disableFileHeader: true,
+        disableLineNumbers: spec.disableLineNumbers,
+      });
+      instance.render({ file: spec.file, containerWrapper: host });
+      this.codeViewer = { key: spec.key, host, instance };
+      return;
+    }
+
+    const instance = new FileDiff({
+      theme: { dark: "pierre-dark", light: "pierre-light" },
+      diffStyle: "unified",
+      disableFileHeader: true,
+      hunkSeparators: "line-info-basic",
+    });
+    instance.render({ fileDiff: spec.fileDiff, containerWrapper: host });
+    this.codeViewer = { key: spec.key, host, instance };
+  }
+
+  private destroyCodeViewer(): void {
+    this.codeViewer?.instance.cleanUp();
+    this.codeViewer = undefined;
+  }
+
+  private getCodeViewerSpec(): CodeViewerSpec | undefined {
+    if (!this.call) return undefined;
+
+    const output = this.result ? contentText(this.result.content, { trim: false }).trimEnd() : "";
+
+    if (this.call.name === "bash") {
+      const command = getBashCommand(this.call.arguments);
+      if (command === undefined) return undefined;
+
+      return {
+        kind: "file",
+        key: `bash\\0${this.call.id}\\0${command}`,
+        file: { name: "command.sh", contents: command },
+        disableLineNumbers: true,
+      };
+    }
+
+    if (this.call.name === "read") {
+      const path = getToolPath(this.call.arguments);
+      if (!path || !this.result || this.result.isError || !output) return undefined;
+
+      const { offset } = getReadRange(this.call.arguments);
+      const { content } = splitReadNote(output);
+      if (!content) return undefined;
+
+      return {
+        kind: "file",
+        key: `read\\0${this.call.id}\\0${path}\\0${offset ?? 1}\\0${content}`,
+        file: { name: path, contents: content },
+        disableLineNumbers: false,
+      };
+    }
+
+    if (this.call.name === "write") {
+      const path = getToolPath(this.call.arguments);
+      const content = getWriteContent(this.call.arguments);
+      if (!path || content === undefined) return undefined;
+
+      return {
+        kind: "file",
+        key: `write\\0${this.call.id}\\0${path}\\0${content}`,
+        file: { name: path, contents: content },
+      };
+    }
+
+    if (this.call.name === "edit") {
+      const patch = getEditPatch(this.result?.details);
+      const fileDiff = patch ? parseEditPatch(patch) : undefined;
+      if (!fileDiff) return undefined;
+
+      return {
+        kind: "diff",
+        key: `edit\\0${this.call.id}\\0${patch}`,
+        fileDiff,
+      };
+    }
+
+    return undefined;
   }
 }
 
@@ -343,6 +435,15 @@ function getEditList<T>(record: Record<string, T>): EditReplacement[] {
   return isEditReplacement(legacyEdit) ? [legacyEdit] : [];
 }
 
+function getEditPatch(details: unknown): string | undefined {
+  const record = asRecord(details);
+  const directPatch = record?.patch;
+  if (typeof directPatch === "string") return directPatch;
+
+  const nestedPatch = asRecord(record?.details)?.patch;
+  return typeof nestedPatch === "string" ? nestedPatch : undefined;
+}
+
 function getEditDiff(details: unknown): string | undefined {
   const record = asRecord(details);
   const directDiff = record?.diff;
@@ -350,6 +451,19 @@ function getEditDiff(details: unknown): string | undefined {
 
   const nestedDiff = asRecord(record?.details)?.diff;
   return typeof nestedDiff === "string" ? nestedDiff : undefined;
+}
+
+function getEditFileDiff(details: unknown): FileDiffMetadata | undefined {
+  const patch = getEditPatch(details);
+  return patch ? parseEditPatch(patch) : undefined;
+}
+
+function parseEditPatch(patch: string): FileDiffMetadata | undefined {
+  try {
+    return parsePatchFiles(patch).flatMap((parsedPatch) => parsedPatch.files)[0];
+  } catch {
+    return undefined;
+  }
 }
 
 function isEditReplacement(value: unknown): value is EditReplacement {

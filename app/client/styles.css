@@ -314,7 +314,7 @@ body {
   margin: 0;
 }
 
-.highlighted pre,
+.tool-code-view,
 .tool-diff,
 .tool-edit-old,
 .tool-edit-new,
@@ -328,13 +328,15 @@ body {
   overflow-wrap: normal;
 }
 
-.highlighted .line-number {
-  display: inline-block;
-  min-inline-size: 3.5ch;
-  margin-inline-end: 1ch;
-  text-align: right;
-  color: var(--muted-fg);
-  user-select: none;
+.tool-code-view {
+  max-inline-size: 100%;
+  margin-block: calc(var(--gap) * 0.6);
+  overflow-x: auto;
+}
+
+.tool-code-view > * {
+  display: block;
+  min-inline-size: max-content;
 }
 
 .tool-result-summary {

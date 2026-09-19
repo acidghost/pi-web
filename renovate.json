@@ -1,22 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices",
     "customManagers:biomeVersions",
-    "customManagers:githubActionsVersions"
+    "local>acidghost/renovate-config",
+    "local>acidghost/renovate-config:approve(patch)"
   ],
-  "assigneesFromCodeOwners": true,
-  "automerge": true,
-  "labels": ["renovate", "lcm/{{updateType}}"],
-  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "matchPackageNames": ["@earendil-works/**"],
       "groupName": "@earendil-works packages"
-    },
-    {
-      "matchUpdateTypes": ["patch"],
-      "addLabels": ["lcm/approve"]
     }
   ]
 }

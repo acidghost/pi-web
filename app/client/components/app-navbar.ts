@@ -16,6 +16,12 @@ export class PiAppNavbar extends LitElement {
   @property({ type: Boolean })
   isStreaming = false;
 
+  @property({ type: Boolean })
+  isLoadingSession = false;
+
+  @property({ type: Boolean })
+  sessionsOpen = false;
+
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
   }
@@ -74,20 +80,36 @@ export class PiAppNavbar extends LitElement {
     this.selectModel(this.selectedProvider(), id);
   }
 
-  private onNewSession() {
-    this.dispatchEvent(new CustomEvent("new-session"));
+  private onToggleSessions() {
+    this.dispatchEvent(new CustomEvent("toggle-sessions", { bubbles: true, composed: true }));
   }
 
   override render() {
     return html`
       <header class="app-chrome navbar crowded margin:0" aria-label="Application bar">
-        <nav aria-label="Application">
-          <ul role="list">
-            <li>
-              <span class="app-brand center" aria-hidden="true">π</span>
-              <sub-title class="vh">pi web</sub-title>
-            </li>
-          </ul>
+        <nav aria-label="Session navigation">
+          <button
+            type="button"
+            class="sessions-toggle iconbutton"
+            title=${this.sessionsOpen ? "Collapse sessions" : "Show sessions"}
+            aria-label=${this.sessionsOpen ? "Collapse sessions" : "Show sessions"}
+            aria-controls="sessions-sidebar"
+            aria-expanded=${this.sessionsOpen}
+            @click=${this.onToggleSessions}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+            >
+              <rect x="3.5" y="4" width="17" height="16" rx="1.5"></rect>
+              <path d="M9 4v16"></path>
+            </svg>
+          </button>
         </nav>
 
         <nav aria-label="Session metadata">
@@ -104,7 +126,7 @@ export class PiAppNavbar extends LitElement {
               <span class="small-text allcaps">Model</span>
               <span>
                 <select
-                  ?disabled=${this.isStreaming || this.providers().length === 0}
+                  ?disabled=${this.isStreaming || this.isLoadingSession || this.providers().length === 0}
                   .value=${this.selectedProvider()}
                   @change=${this.onProviderChange}
                   aria-label="Current provider"
@@ -115,7 +137,11 @@ export class PiAppNavbar extends LitElement {
                   )}
                 </select>
                 <select
-                  ?disabled=${this.isStreaming || this.modelsForSelectedProvider().length === 0}
+                  ?disabled=${
+                    this.isStreaming ||
+                    this.isLoadingSession ||
+                    this.modelsForSelectedProvider().length === 0
+                  }
                   .value=${this.selectedModelId()}
                   @change=${this.onModelChange}
                   aria-label="Current model"
@@ -126,16 +152,6 @@ export class PiAppNavbar extends LitElement {
                   )}
                 </select>
               </span>
-            </li>
-          </ul>
-        </nav>
-
-        <nav aria-label="Session actions">
-          <ul role="list">
-            <li>
-              <button type="button" ?disabled=${this.isStreaming} @click=${this.onNewSession}>
-                New session
-              </button>
             </li>
           </ul>
         </nav>

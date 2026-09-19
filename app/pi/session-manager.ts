@@ -118,6 +118,11 @@ export async function getOrOpenWebSession(
   });
 }
 
+function firstUserMessage(webSession: WebSession): string {
+  const firstUser = webSession.session.messages.find((message) => message.role === "user");
+  return typeof firstUser?.content === "string" ? firstUser.content : "";
+}
+
 export async function listWebSessions(config: AppConfig) {
   const activeIds = new Set(webSessions.keys());
   const persisted = await SessionManager.list(config.cwd);
@@ -126,12 +131,13 @@ export async function listWebSessions(config: AppConfig) {
     activeIds.delete(info.id);
     return {
       id: info.id,
-      name: info.name,
-      firstMessage: info.firstMessage,
+      name: active?.session.sessionName ?? info.name,
+      firstMessage: active ? firstUserMessage(active) || info.firstMessage : info.firstMessage,
       createdAt: info.created.getTime(),
       updatedAt: active?.updatedAt ?? info.modified.getTime(),
-      messageCount: info.messageCount,
+      messageCount: active?.session.messages.length ?? info.messageCount,
       isActive: active !== undefined,
+      isStreaming: active?.session.isStreaming ?? false,
     };
   });
 
@@ -141,11 +147,12 @@ export async function listWebSessions(config: AppConfig) {
     items.push({
       id,
       name: active.session.sessionName,
-      firstMessage: "",
+      firstMessage: firstUserMessage(active),
       createdAt: active.createdAt,
       updatedAt: active.updatedAt,
       messageCount: active.session.messages.length,
       isActive: true,
+      isStreaming: active.session.isStreaming,
     });
   }
 

@@ -13,6 +13,9 @@ export class PiMessageComposer extends LitElement {
   @property({ type: Boolean })
   isStreaming = false;
 
+  @property({ type: Boolean })
+  isLoadingSession = false;
+
   private draft = "";
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
@@ -21,7 +24,7 @@ export class PiMessageComposer extends LitElement {
 
   private submit() {
     const message = this.draft.trim();
-    if (!message || this.isStreaming) return;
+    if (!message || this.isStreaming || this.isLoadingSession) return;
     this.draft = "";
     this.dispatchEvent(new CustomEvent("send-message", { detail: { message } }));
     this.requestUpdate();
@@ -49,7 +52,7 @@ export class PiMessageComposer extends LitElement {
             rows="5"
             style="resize: vertical;"
             .value=${this.draft}
-            ?disabled=${this.isStreaming}
+            ?disabled=${this.isStreaming || this.isLoadingSession}
             @input=${(event: InputEvent) => {
               this.draft = (event.target as HTMLTextAreaElement).value;
               this.requestUpdate();
@@ -62,7 +65,7 @@ export class PiMessageComposer extends LitElement {
             }}
           ></textarea>
           ${
-            this.isStreaming
+            this.isStreaming && !this.isLoadingSession
               ? html`<button
                 type="button"
                 class="justify-content:center bad"
@@ -75,7 +78,7 @@ export class PiMessageComposer extends LitElement {
                 class="justify-content:center"
                 data-cols="12"
                 data-cols@s="1"
-                ?disabled=${!this.draft.trim()}
+                ?disabled=${this.isLoadingSession || !this.draft.trim()}
               >Send</button>`
           }
         </form>

@@ -7,6 +7,7 @@ import {
   getMessages,
   getModels,
   getSession,
+  listSessions,
   sendPrompt,
   setSessionModel,
 } from "./api";
@@ -15,6 +16,10 @@ import { appendOptimisticUserMessage, applyBrowserEvent, setMessages, state } fr
 
 let eventSource: EventSource | undefined;
 let appElement: PiWebApp;
+let refreshSessionsTimer: number | undefined;
+let refreshSessionsRequest: Promise<void> | undefined;
+let refreshSessionsQueued = false;
+let sessionLoadGeneration = 0;
 
 function renderApp() {
   appElement?.requestUpdate();
@@ -32,17 +37,21 @@ function getUrlSession(): string | null {
 
 function openEvents(sessionId: string) {
   eventSource?.close();
-  eventSource = new EventSource(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
+  const source = new EventSource(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
+  eventSource = source;
 
-  eventSource.onopen = () => {
+  source.onopen = () => {
+    if (eventSource !== source) return;
     state.lastError = null;
-    void refreshMetadata();
+    void refreshMetadata(sessionId);
   };
 
-  eventSource.onmessage = (message) => {
+  source.onmessage = (message) => {
+    if (eventSource !== source) return;
     try {
       const event = BrowserEventSchema.parse(JSON.parse(message.data));
       applyBrowserEvent(event);
+      if (event.type === "session_state" || event.type === "agent_end") scheduleRefreshSessions();
       renderApp();
     } catch (error) {
       state.lastError = error instanceof Error ? error.message : String(error);
@@ -50,16 +59,19 @@ function openEvents(sessionId: string) {
     }
   };
 
-  eventSource.onerror = () => {
+  source.onerror = () => {
+    if (eventSource !== source) return;
     state.lastError = "SSE disconnected; reconnecting…";
     renderApp();
   };
 }
 
-async function refreshMetadata() {
-  if (!state.sessionId) return;
-  state.metadata = await getSession(state.sessionId);
-  state.isStreaming = state.metadata.isStreaming;
+async function refreshMetadata(sessionId = state.sessionId) {
+  if (!sessionId) return;
+  const metadata = await getSession(sessionId);
+  if (state.sessionId !== sessionId) return;
+  state.metadata = metadata;
+  state.isStreaming = metadata.isStreaming;
   renderApp();
 }
 
@@ -69,66 +81,167 @@ async function refreshModels() {
   renderApp();
 }
 
-async function loadSession(sessionId: string) {
-  state.sessionId = sessionId;
+function updateSessionPolling() {
+  if (!state.sessions.some((session) => session.isStreaming)) {
+    if (refreshSessionsTimer !== undefined) window.clearTimeout(refreshSessionsTimer);
+    refreshSessionsTimer = undefined;
+    return;
+  }
+  scheduleRefreshSessions(1_000);
+}
+
+async function refreshSessions() {
+  refreshSessionsQueued = true;
+  if (refreshSessionsRequest) return refreshSessionsRequest;
+
+  const request = (async () => {
+    while (refreshSessionsQueued) {
+      refreshSessionsQueued = false;
+      const response = await listSessions();
+      state.sessions = response.sessions;
+      renderApp();
+    }
+  })();
+  refreshSessionsRequest = request;
+
+  try {
+    await request;
+  } finally {
+    if (refreshSessionsRequest === request) refreshSessionsRequest = undefined;
+    updateSessionPolling();
+  }
+}
+
+function scheduleRefreshSessions(delay = 500) {
+  if (refreshSessionsTimer !== undefined) window.clearTimeout(refreshSessionsTimer);
+  refreshSessionsTimer = window.setTimeout(() => {
+    refreshSessionsTimer = undefined;
+    void refreshSessions().catch((error) => {
+      console.warn("Failed to refresh sessions", error);
+    });
+  }, delay);
+}
+
+function beginSessionLoad(): number {
+  const generation = ++sessionLoadGeneration;
+  state.isLoadingSession = true;
   state.lastError = null;
-  state.metadata = await getSession(sessionId);
-  state.isStreaming = state.metadata.isStreaming;
-  const history = await getMessages(sessionId);
-  setMessages(history.agentMessages || []);
-  openEvents(sessionId);
+  renderApp();
+  return generation;
+}
+
+function failSessionLoad(generation: number, error: unknown) {
+  if (generation !== sessionLoadGeneration) return;
+  state.isLoadingSession = false;
+  state.lastError = error instanceof Error ? error.message : String(error);
   renderApp();
 }
 
-async function newSession() {
-  eventSource?.close();
-  state.messages = [];
-  state.pendingToolCalls.clear();
-  state.currentAssistantMessage = null;
-  state.currentAssistantMessageId = null;
-  state.lastError = null;
-  renderApp();
+async function loadSession(sessionId: string, generation = beginSessionLoad()): Promise<boolean> {
+  try {
+    const [metadata, history] = await Promise.all([getSession(sessionId), getMessages(sessionId)]);
+    if (generation !== sessionLoadGeneration) return false;
 
-  const created = await createSession();
-  setUrlSession(created.sessionId);
-  await loadSession(created.sessionId);
+    state.sessionId = sessionId;
+    state.metadata = metadata;
+    state.isStreaming = metadata.isStreaming;
+    setMessages(history.agentMessages || []);
+    setUrlSession(sessionId);
+    openEvents(sessionId);
+    state.isLoadingSession = false;
+    renderApp();
+
+    void refreshSessions().catch((error) => {
+      console.warn("Failed to refresh sessions", error);
+    });
+    return true;
+  } catch (error) {
+    failSessionLoad(generation, error);
+    throw error;
+  }
+}
+
+async function newSession() {
+  const generation = beginSessionLoad();
+  try {
+    const created = await createSession();
+    if (generation !== sessionLoadGeneration) return;
+    await loadSession(created.sessionId, generation);
+  } catch (error) {
+    failSessionLoad(generation, error);
+  }
 }
 
 async function handleSend(message: string) {
   const trimmed = message.trim();
-  if (!trimmed || !state.sessionId || state.isStreaming) return;
+  const sessionId = state.sessionId;
+  if (!trimmed || !sessionId || state.isStreaming || state.isLoadingSession) return;
 
   state.lastError = null;
   appendOptimisticUserMessage(trimmed);
   renderApp();
 
   try {
-    await sendPrompt(state.sessionId, trimmed);
+    await sendPrompt(sessionId, trimmed);
+    await refreshSessions();
+  } catch (error) {
+    if (state.sessionId !== sessionId) return;
+    state.lastError = error instanceof Error ? error.message : String(error);
+    renderApp();
+  }
+}
+
+async function handleRefreshSessions() {
+  try {
+    state.lastError = null;
+    await refreshSessions();
   } catch (error) {
     state.lastError = error instanceof Error ? error.message : String(error);
     renderApp();
   }
 }
 
+async function handleSelectSession(sessionId: string) {
+  const target = state.sessions.find((session) => session.id === sessionId);
+  if (
+    state.isLoadingSession ||
+    state.isStreaming ||
+    target?.isStreaming ||
+    sessionId === state.sessionId
+  ) {
+    return;
+  }
+  try {
+    await loadSession(sessionId);
+  } catch {
+    // loadSession only reports failures for the latest selection.
+  }
+}
+
 async function handleSelectModel(provider: string, id: string) {
-  if (!state.sessionId || state.isStreaming) return;
+  const sessionId = state.sessionId;
+  if (!sessionId || state.isStreaming || state.isLoadingSession) return;
   try {
     state.lastError = null;
-    const response = await setSessionModel(state.sessionId, provider, id);
+    const response = await setSessionModel(sessionId, provider, id);
+    if (state.sessionId !== sessionId) return;
     if (state.metadata) state.metadata = { ...state.metadata, model: response.model };
     renderApp();
   } catch (error) {
+    if (state.sessionId !== sessionId) return;
     state.lastError = error instanceof Error ? error.message : String(error);
     renderApp();
   }
 }
 
 async function handleAbort() {
-  if (!state.sessionId) return;
+  const sessionId = state.sessionId;
+  if (!sessionId || state.isLoadingSession) return;
   try {
-    await abortSession(state.sessionId);
-    await refreshMetadata();
+    await abortSession(sessionId);
+    await refreshMetadata(sessionId);
   } catch (error) {
+    if (state.sessionId !== sessionId) return;
     state.lastError = error instanceof Error ? error.message : String(error);
     renderApp();
   }
@@ -144,8 +257,14 @@ async function boot() {
   appElement.onSend = (message) => void handleSend(message);
   appElement.onAbort = () => void handleAbort();
   appElement.onNewSession = () => void newSession();
+  appElement.onSelectSession = (sessionId) => void handleSelectSession(sessionId);
+  appElement.onRefreshSessions = () => void handleRefreshSessions();
   appElement.onSelectModel = (provider, id) => void handleSelectModel(provider, id);
   void refreshModels().catch((error) => {
+    state.lastError = error instanceof Error ? error.message : String(error);
+    renderApp();
+  });
+  void refreshSessions().catch((error) => {
     state.lastError = error instanceof Error ? error.message : String(error);
     renderApp();
   });

@@ -6,14 +6,21 @@ import type {
   ToolResultMessage,
   Usage,
 } from "@earendil-works/pi-ai";
-import type { BrowserEvent, ModelSummary, SessionMetadataResponse } from "@shared/protocol";
+import type {
+  BrowserEvent,
+  ModelSummary,
+  SessionListItem,
+  SessionMetadataResponse,
+} from "@shared/protocol";
 
 export interface AppState {
   sessionId: string | null;
   metadata: SessionMetadataResponse | null;
   models: ModelSummary[];
+  sessions: SessionListItem[];
   messages: AgentMessage[];
   isStreaming: boolean;
+  isLoadingSession: boolean;
   pendingToolCalls: Set<string>;
   currentAssistantMessageId: string | null;
   currentAssistantMessage: AssistantMessage | null;
@@ -25,8 +32,10 @@ export const state: AppState = {
   sessionId: null,
   metadata: null,
   models: [],
+  sessions: [],
   messages: [],
   isStreaming: false,
+  isLoadingSession: false,
   pendingToolCalls: new Set<string>(),
   currentAssistantMessageId: null,
   currentAssistantMessage: null,

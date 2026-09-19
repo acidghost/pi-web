@@ -309,6 +309,7 @@ export const SessionListItemSchema = z
     updatedAt: z.number(),
     messageCount: z.number(),
     isActive: z.boolean(),
+    isStreaming: z.boolean(),
   })
   .strict();
 

@@ -22,13 +22,21 @@ export const StopReasonSchema = z.enum([
   "deferred",
 ]);
 
+// The schemas below mirror AgentMessage and its nested types from
+// @earendil-works/pi-ai / pi-agent-core. Sessions persisted by other pi
+// frontends (e.g. the TUI) may contain fields from newer SDK versions, so these
+// schemas use `.strip()` instead of `.strict()`: unknown keys are dropped
+// instead of failing validation. AgentMessageSchema's z.ZodType<AgentMessage>
+// annotation still fails typecheck if the SDK adds a required field we don't
+// declare. App-owned schemas further below stay `.strict()`.
+
 export const TextContentSchema = z
   .object({
     type: z.literal("text"),
     text: z.string(),
     textSignature: z.string().optional(),
   })
-  .strict();
+  .strip();
 
 export const ThinkingContentSchema = z
   .object({
@@ -37,7 +45,7 @@ export const ThinkingContentSchema = z
     thinkingSignature: z.string().optional(),
     redacted: z.boolean().optional(),
   })
-  .strict();
+  .strip();
 
 export const ImageContentSchema = z
   .object({
@@ -45,7 +53,7 @@ export const ImageContentSchema = z
     data: z.string(),
     mimeType: z.string(),
   })
-  .strict();
+  .strip();
 
 export const ToolCallSchema = z
   .object({
@@ -55,7 +63,7 @@ export const ToolCallSchema = z
     arguments: UnknownRecordSchema,
     thoughtSignature: z.string().optional(),
   })
-  .strict();
+  .strip();
 
 export const UsageSchema = z
   .object({
@@ -72,9 +80,9 @@ export const UsageSchema = z
         cacheWrite: z.number(),
         total: z.number(),
       })
-      .strict(),
+      .strip(),
   })
-  .strict();
+  .strip();
 
 export const AssistantMessageDiagnosticSchema = z
   .object({
@@ -87,11 +95,11 @@ export const AssistantMessageDiagnosticSchema = z
         stack: z.string().optional(),
         code: z.union([z.string(), z.number()]).optional(),
       })
-      .strict()
+      .strip()
       .optional(),
     details: UnknownRecordSchema.optional(),
   })
-  .strict();
+  .strip();
 
 export const UserMessageSchema = z
   .object({
@@ -102,7 +110,7 @@ export const UserMessageSchema = z
     ]),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const AssistantMessageSchema = z
   .object({
@@ -121,7 +129,7 @@ export const AssistantMessageSchema = z
     errorMessage: z.string().optional(),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const ToolResultMessageSchema = z
   .object({
@@ -133,7 +141,7 @@ export const ToolResultMessageSchema = z
     isError: z.boolean(),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const BashExecutionMessageSchema = z
   .object({
@@ -147,7 +155,7 @@ export const BashExecutionMessageSchema = z
     timestamp: z.number(),
     excludeFromContext: z.boolean().optional(),
   })
-  .strict()
+  .strip()
   .transform((message) => ({ ...message, exitCode: message.exitCode }));
 
 export const CustomMessageSchema = z
@@ -162,7 +170,7 @@ export const CustomMessageSchema = z
     details: z.unknown().optional(),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const BranchSummaryMessageSchema = z
   .object({
@@ -171,7 +179,7 @@ export const BranchSummaryMessageSchema = z
     fromId: z.string(),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const CompactionSummaryMessageSchema = z
   .object({
@@ -180,7 +188,7 @@ export const CompactionSummaryMessageSchema = z
     tokensBefore: z.number(),
     timestamp: z.number(),
   })
-  .strict();
+  .strip();
 
 export const AgentMessageSchema: z.ZodType<AgentMessage> = z.union([
   UserMessageSchema,

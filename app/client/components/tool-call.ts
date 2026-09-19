@@ -69,14 +69,13 @@ export class PiToolCall extends LitElement {
     const output = this.result ? contentText(this.result.content, { trim: false }).trimEnd() : "";
     const pending = state.pendingToolCalls.has(this.call.id) && !this.result;
     const tone = this.result?.isError ? "bad" : pending ? "warn" : "plain";
-    const stateLabel = pending ? "Running" : this.result?.isError ? "Failed" : "Tool";
 
     const { title, content } = this.renderOutput(output);
 
     return html`
-      <details class=${`message-card ${tone}`} ?open=${pending || Boolean(this.result?.isError)}>
+      <details class=${`message-card ${tone}`} ?open=${pending}>
         <summary class="flex-row align-items:center">
-          <span class="accent-fg">${stateLabel} <code>${this.call.name}</code></span>
+          <code class="accent-fg">${this.call.name}:</code>
           ${title ?? nothing}
         </summary>
         ${content}
@@ -106,10 +105,8 @@ export class PiToolCall extends LitElement {
       return { content: html`<pre class="tool-raw-output">${fallback}</pre>` };
     }
 
-    const commandSummary = summarizeCommand(command);
-
     return {
-      title: html`<code class="tool-call-command" title=${command}>${commandSummary}</code>`,
+      title: html`<code class="tool-call-command" title=${command}>${command}</code>`,
       content: html`
         ${this.renderCodeViewerPlaceholder()}
         ${
@@ -353,15 +350,6 @@ export class PiToolCall extends LitElement {
 
     return undefined;
   }
-}
-
-const COMMAND_SUMMARY_MAX = 80;
-
-function summarizeCommand(command: string): string {
-  const normalized = command.replace(/\s+/g, " ").trim();
-  if (normalized.length <= COMMAND_SUMMARY_MAX) return normalized;
-
-  return `${normalized.slice(0, COMMAND_SUMMARY_MAX - 1)}…`;
 }
 
 const READ_NOTE_PATTERN =

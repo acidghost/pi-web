@@ -11,7 +11,7 @@ export function contentText(content: Message["content"], options: ContentTextOpt
   const {
     includeImages = true,
     includeThinking = true,
-    includeToolCalls = true,
+    includeToolCalls = false,
     trim = true,
   } = options;
 

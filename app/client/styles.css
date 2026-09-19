@@ -278,13 +278,14 @@ body {
 .message-card {
   max-inline-size: min(calc(var(--line-length) * 0.72), 100%);
   overflow-wrap: anywhere;
+  margin-block: 0;
 }
 
 .message-card > summary .accent-fg {
   flex-shrink: 0;
 }
 
-.message-card > summary .tool-call-command {
+.message-card > summary {
   flex: 1;
   min-inline-size: 0;
   overflow: hidden;

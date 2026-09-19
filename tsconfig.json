@@ -9,9 +9,8 @@
     "allowJs": true,
     "ignoreDeprecations": "6.0",
     "types": ["bun"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["app/shared/*"]
+      "@shared/*": ["./app/shared/*"]
     },
 
     // Bundler mode

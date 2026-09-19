@@ -11,6 +11,7 @@ const THINKING_LEVELS = new Set<ThinkingLevel>([
   "medium",
   "high",
   "xhigh",
+  "max",
 ]);
 
 function parsePort(value: string | undefined): number {

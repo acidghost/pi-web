@@ -1,11 +1,6 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type {
-  AgentSession,
-  AuthStorage,
-  ModelRegistry,
-  SettingsManager,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, ModelRuntime, SettingsManager } from "@earendil-works/pi-coding-agent";
 import type { BrowserEvent } from "@shared/protocol";
 
 export type SupportedToolName = "read" | "bash" | "edit" | "write";
@@ -22,8 +17,7 @@ export interface AppConfig {
 }
 
 export interface AppServices {
-  authStorage: AuthStorage;
-  modelRegistry: ModelRegistry;
+  modelRuntime: ModelRuntime;
   settingsManager: SettingsManager;
   explicitModel?: Model<Api>;
 }

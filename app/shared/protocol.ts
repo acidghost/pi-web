@@ -3,8 +3,24 @@ import { z } from "zod";
 
 const UnknownRecordSchema = z.record(z.string(), z.unknown());
 
-export const ThinkingLevelSchema = z.enum(["off", "minimal", "low", "medium", "high", "xhigh"]);
-export const StopReasonSchema = z.enum(["stop", "length", "toolUse", "error", "aborted"]);
+export const ThinkingLevelSchema = z.enum([
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
+export const StopReasonSchema = z.enum([
+  "pending",
+  "stop",
+  "length",
+  "toolUse",
+  "error",
+  "aborted",
+  "deferred",
+]);
 
 export const TextContentSchema = z
   .object({

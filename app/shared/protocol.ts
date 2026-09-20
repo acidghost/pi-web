@@ -396,6 +396,8 @@ export const ApiErrorResponseSchema = z
 export const HealthResponseSchema = z
   .object({
     ok: z.literal(true),
+    version: z.string(),
+    commit: z.string(),
   })
   .strict();
 

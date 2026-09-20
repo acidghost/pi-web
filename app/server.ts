@@ -1,5 +1,6 @@
 import type { BunRequest } from "bun";
 import type { z } from "zod";
+import { buildMetadata } from "./build-metadata.ts";
 import homepage from "./index.html";
 import { loadConfig } from "./pi/config.ts";
 import {
@@ -260,7 +261,7 @@ const server = Bun.serve({
     "/": homepage,
 
     "/api/health": {
-      GET: apiRoute(() => json(HealthResponseSchema, { ok: true })),
+      GET: apiRoute(() => json(HealthResponseSchema, { ok: true, ...buildMetadata })),
     },
     "/api/models": {
       GET: apiRoute(() => handleModels()),

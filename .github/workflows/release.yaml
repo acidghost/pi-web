@@ -81,6 +81,7 @@ jobs:
         run: |
           bun run check
           bun run typecheck
+          bun test
 
       - name: Build release executables
         env:

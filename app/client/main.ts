@@ -1,4 +1,4 @@
-import { BrowserEventSchema } from "@shared/protocol";
+import { BrowserEventSchema, type ThinkingLevel } from "@shared/protocol";
 import { html, render } from "lit";
 import "./app";
 import {
@@ -10,6 +10,7 @@ import {
   listSessions,
   sendPrompt,
   setSessionModel,
+  setSessionThinkingLevel,
 } from "./api";
 import type { PiWebApp } from "./app";
 import { appendOptimisticUserMessage, applyBrowserEvent, setMessages, state } from "./state";
@@ -220,16 +221,49 @@ async function handleSelectSession(sessionId: string) {
 
 async function handleSelectModel(provider: string, id: string) {
   const sessionId = state.sessionId;
-  if (!sessionId || state.isStreaming || state.isLoadingSession) return;
+  if (!sessionId || state.isStreaming || state.isLoadingSession || state.isUpdatingSessionSettings)
+    return;
+  state.isUpdatingSessionSettings = true;
+  state.lastError = null;
+  renderApp();
   try {
-    state.lastError = null;
     const response = await setSessionModel(sessionId, provider, id);
     if (state.sessionId !== sessionId) return;
-    if (state.metadata) state.metadata = { ...state.metadata, model: response.model };
-    renderApp();
+    if (state.metadata) {
+      state.metadata = {
+        ...state.metadata,
+        model: response.model,
+        thinkingLevel: response.thinkingLevel,
+        availableThinkingLevels: response.availableThinkingLevels,
+      };
+    }
   } catch (error) {
     if (state.sessionId !== sessionId) return;
     state.lastError = error instanceof Error ? error.message : String(error);
+  } finally {
+    state.isUpdatingSessionSettings = false;
+    renderApp();
+  }
+}
+
+async function handleSelectThinkingLevel(thinkingLevel: ThinkingLevel) {
+  const sessionId = state.sessionId;
+  if (!sessionId || state.isStreaming || state.isLoadingSession || state.isUpdatingSessionSettings)
+    return;
+  state.isUpdatingSessionSettings = true;
+  state.lastError = null;
+  renderApp();
+  try {
+    const response = await setSessionThinkingLevel(sessionId, thinkingLevel);
+    if (state.sessionId !== sessionId) return;
+    if (state.metadata) {
+      state.metadata = { ...state.metadata, thinkingLevel: response.thinkingLevel };
+    }
+  } catch (error) {
+    if (state.sessionId !== sessionId) return;
+    state.lastError = error instanceof Error ? error.message : String(error);
+  } finally {
+    state.isUpdatingSessionSettings = false;
     renderApp();
   }
 }
@@ -260,6 +294,8 @@ async function boot() {
   appElement.onSelectSession = (sessionId) => void handleSelectSession(sessionId);
   appElement.onRefreshSessions = () => void handleRefreshSessions();
   appElement.onSelectModel = (provider, id) => void handleSelectModel(provider, id);
+  appElement.onSelectThinkingLevel = (thinkingLevel) =>
+    void handleSelectThinkingLevel(thinkingLevel);
   void refreshModels().catch((error) => {
     state.lastError = error instanceof Error ? error.message : String(error);
     renderApp();

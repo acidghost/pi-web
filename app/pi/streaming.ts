@@ -23,6 +23,9 @@ export function sessionStateEvent(webSession: WebSession): BrowserEvent {
         }
       : null,
     thinkingLevel: webSession.session.thinkingLevel,
+    availableThinkingLevels: webSession.session.model
+      ? webSession.session.getAvailableThinkingLevels()
+      : ["off"],
   };
 }
 

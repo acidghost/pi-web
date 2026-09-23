@@ -1,3 +1,4 @@
+import type { ThinkingLevel } from "@shared/protocol";
 import { html, LitElement } from "lit";
 import { customElement, state as litState } from "lit/decorators.js";
 import "./components/app-navbar";
@@ -15,6 +16,7 @@ export class PiWebApp extends LitElement {
   onSelectSession?: (sessionId: string) => void;
   onRefreshSessions?: () => void;
   onSelectModel?: (provider: string, id: string) => void;
+  onSelectThinkingLevel?: (thinkingLevel: ThinkingLevel) => void;
 
   @litState()
   private sidebarOpen = window.matchMedia("(min-width: 75ch)").matches;
@@ -120,10 +122,13 @@ export class PiWebApp extends LitElement {
             .models=${state.models}
             .isStreaming=${state.isStreaming}
             .isLoadingSession=${state.isLoadingSession}
+            .isUpdatingSessionSettings=${state.isUpdatingSessionSettings}
             .sessionsOpen=${this.sidebarOpen}
             @toggle-sessions=${() => this.toggleSidebar()}
             @select-model=${(event: CustomEvent<{ provider: string; id: string }>) =>
               this.onSelectModel?.(event.detail.provider, event.detail.id)}
+            @select-thinking-level=${(event: CustomEvent<{ thinkingLevel: ThinkingLevel }>) =>
+              this.onSelectThinkingLevel?.(event.detail.thinkingLevel)}
           ></pi-app-navbar>
 
           <pi-transcript

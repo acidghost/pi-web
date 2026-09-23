@@ -21,6 +21,7 @@ export interface AppState {
   messages: AgentMessage[];
   isStreaming: boolean;
   isLoadingSession: boolean;
+  isUpdatingSessionSettings: boolean;
   pendingToolCalls: Set<string>;
   currentAssistantMessageId: string | null;
   currentAssistantMessage: AssistantMessage | null;
@@ -36,6 +37,7 @@ export const state: AppState = {
   messages: [],
   isStreaming: false,
   isLoadingSession: false,
+  isUpdatingSessionSettings: false,
   pendingToolCalls: new Set<string>(),
   currentAssistantMessageId: null,
   currentAssistantMessage: null,
@@ -201,6 +203,7 @@ export function applyBrowserEvent(event: BrowserEvent) {
           updatedAt: event.updatedAt,
           model: event.model,
           thinkingLevel: event.thinkingLevel,
+          availableThinkingLevels: event.availableThinkingLevels,
         };
       break;
 

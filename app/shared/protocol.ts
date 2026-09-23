@@ -228,6 +228,7 @@ export const BrowserEventSchema = z.discriminatedUnion("type", [
       updatedAt: z.number(),
       model: ModelSummarySchema.nullable(),
       thinkingLevel: ThinkingLevelSchema,
+      availableThinkingLevels: z.array(ThinkingLevelSchema),
     })
     .strict(),
   z
@@ -304,6 +305,7 @@ export const SessionMetadataResponseSchema = z
     updatedAt: z.number(),
     isStreaming: z.boolean(),
     thinkingLevel: ThinkingLevelSchema,
+    availableThinkingLevels: z.array(ThinkingLevelSchema),
     model: ModelSummarySchema.nullable(),
   })
   .strict();
@@ -363,6 +365,21 @@ export const SetModelResponseSchema = z
   .object({
     ok: z.literal(true),
     model: ModelSummarySchema.nullable(),
+    thinkingLevel: ThinkingLevelSchema,
+    availableThinkingLevels: z.array(ThinkingLevelSchema),
+  })
+  .strict();
+
+export const SetThinkingLevelRequestSchema = z
+  .object({
+    thinkingLevel: ThinkingLevelSchema,
+  })
+  .strict();
+
+export const SetThinkingLevelResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    thinkingLevel: ThinkingLevelSchema,
   })
   .strict();
 
@@ -413,6 +430,9 @@ export type PromptRequest = z.infer<typeof PromptRequestSchema>;
 export type PromptResponse = z.infer<typeof PromptResponseSchema>;
 export type SetModelRequest = z.infer<typeof SetModelRequestSchema>;
 export type SetModelResponse = z.infer<typeof SetModelResponseSchema>;
+export type SetThinkingLevelRequest = z.infer<typeof SetThinkingLevelRequestSchema>;
+export type SetThinkingLevelResponse = z.infer<typeof SetThinkingLevelResponseSchema>;
+export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>;
 export type ModelsResponse = z.infer<typeof ModelsResponseSchema>;
 export type AbortResponse = z.infer<typeof AbortResponseSchema>;
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;

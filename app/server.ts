@@ -32,6 +32,8 @@ import {
   SessionMetadataResponseSchema,
   SetModelRequestSchema,
   SetModelResponseSchema,
+  SetThinkingLevelRequestSchema,
+  SetThinkingLevelResponseSchema,
 } from "./shared/protocol.ts";
 
 const config = loadConfig();
@@ -235,7 +237,36 @@ async function handleSetModel(webSession: WebSession, request: Request): Promise
 
   await webSession.session.setModel(model);
   notifyState(webSession);
-  return json(SetModelResponseSchema, { ok: true, model: modelToJson(webSession.session.model) });
+  return json(SetModelResponseSchema, {
+    ok: true,
+    model: modelToJson(webSession.session.model),
+    thinkingLevel: webSession.session.thinkingLevel,
+    availableThinkingLevels: webSession.session.getAvailableThinkingLevels(),
+  });
+}
+
+async function handleSetThinkingLevel(webSession: WebSession, request: Request): Promise<Response> {
+  if (webSession.session.isStreaming) {
+    return jsonError("Cannot change thinking level while streaming", 409);
+  }
+
+  const { thinkingLevel } = await parseJsonBody(request, SetThinkingLevelRequestSchema);
+  const availableThinkingLevels = webSession.session.model
+    ? webSession.session.getAvailableThinkingLevels()
+    : ["off"];
+  if (!availableThinkingLevels.includes(thinkingLevel)) {
+    return jsonError(
+      `Thinking level "${thinkingLevel}" is unavailable for the current model. Available levels: ${availableThinkingLevels.join(", ")}`,
+      400,
+    );
+  }
+
+  webSession.session.setThinkingLevel(thinkingLevel);
+  notifyState(webSession);
+  return json(SetThinkingLevelResponseSchema, {
+    ok: true,
+    thinkingLevel: webSession.session.thinkingLevel,
+  });
 }
 
 function handleApiError(error: unknown): Response {
@@ -281,6 +312,9 @@ const server = Bun.serve({
     },
     "/api/sessions/:id/model": {
       PUT: apiRoute((request) => handleWithSession(request, handleSetModel)),
+    },
+    "/api/sessions/:id/thinking-level": {
+      PUT: apiRoute((request) => handleWithSession(request, handleSetThinkingLevel)),
     },
     "/api/sessions/:id/abort": {
       POST: apiRoute((request) => handleWithSession(request, handleAbort)),

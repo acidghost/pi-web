@@ -9,6 +9,9 @@ import type {
   SessionMetadataResponse,
   SetModelRequest,
   SetModelResponse,
+  SetThinkingLevelRequest,
+  SetThinkingLevelResponse,
+  ThinkingLevel,
 } from "@shared/protocol";
 import {
   AbortResponseSchema,
@@ -21,6 +24,7 @@ import {
   PromptResponseSchema,
   SessionMetadataResponseSchema,
   SetModelResponseSchema,
+  SetThinkingLevelResponseSchema,
 } from "@shared/protocol";
 import type { z } from "zod";
 
@@ -77,6 +81,22 @@ export function setSessionModel(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export function setSessionThinkingLevel(
+  sessionId: string,
+  thinkingLevel: ThinkingLevel,
+): Promise<SetThinkingLevelResponse> {
+  const body: SetThinkingLevelRequest = { thinkingLevel };
+  return fetchJson(
+    SetThinkingLevelResponseSchema,
+    `/api/sessions/${encodeURIComponent(sessionId)}/thinking-level`,
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export function sendPrompt(sessionId: string, message: string): Promise<PromptResponse> {

@@ -39,7 +39,11 @@ async function createWebSessionFromManager(
   config: AppConfig,
   services: AppServices,
   sessionManager: SessionManager,
-  timestamps?: { createdAt?: number; updatedAt?: number },
+  options: {
+    model?: Model<Api>;
+    thinkingLevel?: AppConfig["thinkingLevel"];
+    timestamps?: { createdAt?: number; updatedAt?: number };
+  } = {},
 ): Promise<WebSession> {
   const now = Date.now();
 
@@ -50,8 +54,8 @@ async function createWebSessionFromManager(
     settingsManager: services.settingsManager,
     sessionManager,
     tools: config.tools,
-    model: services.explicitModel,
-    thinkingLevel: config.thinkingLevel,
+    model: options.model,
+    thinkingLevel: options.thinkingLevel,
   });
 
   const id = session.sessionId;
@@ -66,8 +70,8 @@ async function createWebSessionFromManager(
     session,
     unsubscribe: () => undefined,
     subscribers: new Set<SseSubscriber>(),
-    createdAt: timestamps?.createdAt ?? now,
-    updatedAt: timestamps?.updatedAt ?? now,
+    createdAt: options.timestamps?.createdAt ?? now,
+    updatedAt: options.timestamps?.updatedAt ?? now,
     lastError: modelFallbackMessage,
   };
 
@@ -90,7 +94,10 @@ export async function createWebSession(
   config: AppConfig,
   services: AppServices,
 ): Promise<WebSession> {
-  return createWebSessionFromManager(config, services, SessionManager.create(config.cwd));
+  return createWebSessionFromManager(config, services, SessionManager.create(config.cwd), {
+    model: services.explicitModel,
+    thinkingLevel: config.thinkingLevel,
+  });
 }
 
 async function findPersistedSession(
@@ -113,8 +120,10 @@ export async function getOrOpenWebSession(
   if (!info) return undefined;
 
   return createWebSessionFromManager(config, services, SessionManager.open(info.path), {
-    createdAt: info.created.getTime(),
-    updatedAt: info.modified.getTime(),
+    timestamps: {
+      createdAt: info.created.getTime(),
+      updatedAt: info.modified.getTime(),
+    },
   });
 }
 
@@ -200,6 +209,9 @@ export function sessionMetadata(config: AppConfig, webSession: WebSession) {
     updatedAt: webSession.updatedAt,
     isStreaming: webSession.session.isStreaming,
     thinkingLevel: webSession.session.thinkingLevel,
+    availableThinkingLevels: webSession.session.model
+      ? webSession.session.getAvailableThinkingLevels()
+      : ["off"],
     model: modelToJson(webSession.session.model),
   };
 }

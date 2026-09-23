@@ -1,4 +1,8 @@
-import type { ModelSummary, SessionMetadataResponse } from "@shared/protocol";
+import {
+  type ModelSummary,
+  type SessionMetadataResponse,
+  ThinkingLevelSchema,
+} from "@shared/protocol";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
@@ -18,6 +22,9 @@ export class PiAppNavbar extends LitElement {
 
   @property({ type: Boolean })
   isLoadingSession = false;
+
+  @property({ type: Boolean })
+  isUpdatingSessionSettings = false;
 
   @property({ type: Boolean })
   sessionsOpen = false;
@@ -69,15 +76,32 @@ export class PiAppNavbar extends LitElement {
   }
 
   private onProviderChange(event: Event) {
-    const provider = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    const provider = select.value;
+    select.value = this.selectedProvider();
     const model = this.models.find((candidate) => candidate.provider === provider);
     if (!model) return;
     this.selectModel(provider, model.id);
   }
 
   private onModelChange(event: Event) {
-    const id = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    const id = select.value;
+    select.value = this.selectedModelId();
     this.selectModel(this.selectedProvider(), id);
+  }
+
+  private onThinkingLevelChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const thinkingLevel = ThinkingLevelSchema.parse(select.value);
+    select.value = this.metadata?.thinkingLevel ?? "off";
+    this.dispatchEvent(
+      new CustomEvent("select-thinking-level", {
+        detail: { thinkingLevel },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private onToggleSessions() {
@@ -126,7 +150,12 @@ export class PiAppNavbar extends LitElement {
               <span class="small-text allcaps">Model</span>
               <span>
                 <select
-                  ?disabled=${this.isStreaming || this.isLoadingSession || this.providers().length === 0}
+                  ?disabled=${
+                    this.isStreaming ||
+                    this.isLoadingSession ||
+                    this.isUpdatingSessionSettings ||
+                    this.providers().length === 0
+                  }
                   .value=${this.selectedProvider()}
                   @change=${this.onProviderChange}
                   aria-label="Current provider"
@@ -140,6 +169,7 @@ export class PiAppNavbar extends LitElement {
                   ?disabled=${
                     this.isStreaming ||
                     this.isLoadingSession ||
+                    this.isUpdatingSessionSettings ||
                     this.modelsForSelectedProvider().length === 0
                   }
                   .value=${this.selectedModelId()}
@@ -152,6 +182,27 @@ export class PiAppNavbar extends LitElement {
                   )}
                 </select>
               </span>
+            </li>
+            <li class="box padding-block:0 background:none flex-row align-items:center">
+              <label class="small-text allcaps" for="thinking-level">Thinking</label>
+              <select
+                id="thinking-level"
+                ?disabled=${
+                  this.isStreaming ||
+                  this.isLoadingSession ||
+                  this.isUpdatingSessionSettings ||
+                  !this.sessionId ||
+                  !this.metadata
+                }
+                .value=${this.metadata?.thinkingLevel ?? "off"}
+                @change=${this.onThinkingLevelChange}
+                aria-label="Thinking level"
+                class="border:none"
+              >
+                ${(this.metadata?.availableThinkingLevels ?? ThinkingLevelSchema.options).map(
+                  (level) => html`<option value=${level}>${level}</option>`,
+                )}
+              </select>
             </li>
           </ul>
         </nav>

@@ -2,9 +2,9 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import "./markdown-content";
 import "./tool-call";
 import { contentText } from "@shared/message-content";
-import { renderMarkdown } from "../markdown";
 
 @customElement("pi-message-item")
 export class PiMessageItem extends LitElement {
@@ -23,14 +23,22 @@ export class PiMessageItem extends LitElement {
 
     if (this.message.role === "user") {
       return html`<article class="message-card box info"
-        >${renderMarkdown(contentText(this.message.content))}</article>`;
+        ><pi-markdown-content
+          .source=${contentText(this.message.content)}
+        ></pi-markdown-content></article>`;
     }
 
     if (this.message.role === "assistant") {
       const text = contentText(this.message.content);
       const calls = this.message.content.filter((block) => block.type === "toolCall");
       return html`
-        ${text ? html`<article class="message-card box">${renderMarkdown(text)}</article>` : nothing}
+        ${
+          text
+            ? html`<article class="message-card box"
+              ><pi-markdown-content .source=${text}></pi-markdown-content
+            ></article>`
+            : nothing
+        }
         ${calls.map(
           (call) => html`<pi-tool-call
             class="contents"

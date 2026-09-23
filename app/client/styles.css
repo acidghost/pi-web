@@ -293,6 +293,10 @@ body {
   white-space: nowrap;
 }
 
+pi-markdown-content {
+  display: contents;
+}
+
 .markdown-content p,
 .markdown-content ul,
 .markdown-content ol,
@@ -300,6 +304,21 @@ body {
 .markdown-content pre,
 .markdown-content table {
   margin-block: calc(var(--gap) * 0.6);
+}
+
+.markdown-content pre {
+  max-inline-size: 100%;
+  overflow-x: auto;
+  border: var(--border-width) solid var(--app-line);
+  padding: var(--gap);
+  background: color-mix(in srgb, var(--bg) 94%, var(--plain-graphical-fg));
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.markdown-content pre > code {
+  display: block;
+  min-inline-size: max-content;
 }
 
 .markdown-content ul,

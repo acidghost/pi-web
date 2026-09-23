@@ -1,6 +1,4 @@
 import DOMPurify, { type Config } from "dompurify";
-import { html, nothing, type TemplateResult } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { Marked } from "marked";
 
 const markdown = new Marked<string, string>({
@@ -17,13 +15,17 @@ const markdown = new Marked<string, string>({
     image({ text }) {
       return escapeHtml(text || "[image]");
     },
+    code({ text, lang }) {
+      const language = lang?.trim().split(/\s+/u)[0] || "text";
+      return `<pre><code class="language-${escapeHtml(language)}">${escapeHtml(text)}</code></pre>\n`;
+    },
   },
 });
 
 const sanitizerConfig = {
   ALLOW_ARIA_ATTR: false,
   ALLOW_DATA_ATTR: false,
-  ALLOWED_ATTR: ["checked", "disabled", "href", "type"],
+  ALLOWED_ATTR: ["checked", "disabled", "href", "type", "class"],
   ALLOWED_TAGS: [
     "a",
     "blockquote",
@@ -55,15 +57,13 @@ const sanitizerConfig = {
   ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
 } satisfies Config;
 
-export function renderMarkdown(source: string): TemplateResult | typeof nothing {
-  if (!source.trim()) return nothing;
-
+export function renderMarkdownHtml(source: string): string {
   try {
     const rendered = markdown.parse(source, { async: false });
-    const sanitized = sanitizeHtml(rendered);
-    return html`<div class="markdown-content">${unsafeHTML(sanitized)}</div>`;
-  } catch {
-    return html`<div class="markdown-content markdown-content--plain">${source}</div>`;
+    return sanitizeHtml(rendered);
+  } catch (error) {
+    console.warn("[markdown] failed to render markdown", error);
+    return escapeHtml(source);
   }
 }
 

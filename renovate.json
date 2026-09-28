@@ -8,7 +8,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["@earendil-works/**"],
-      "groupName": "@earendil-works packages"
+      "groupName": "pi packages"
     }
   ]
 }

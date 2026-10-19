@@ -18,7 +18,7 @@
     "@earendil-works/pi-agent-core": "0.85.1",
     "@earendil-works/pi-ai": "0.85.1",
     "@earendil-works/pi-coding-agent": "0.85.1",
-    "@pierre/diffs": "1.5.1",
+    "@pierre/diffs": "1.5.2",
     "dompurify": "3.4.16",
     "lit": "3.3.3",
     "marked": "18.0.14",
